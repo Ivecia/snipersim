@@ -1,0 +1,80 @@
+This is the config of the cost model.
+Oh, you can add any comments EXCEPT ANY INDIVIDUAL INTEGERS AND NEGATIVE SIGN.
+
+Here are some constants which cost model needed.
+TOTAL_INSTRUCTIONS = 67
+
+The number of kinds of functional units: 8
+The number of functional units in each kinds: 1 1 1 1 1 1 1 1
+The details of instruction:
+* ith line indicates the functional unit and its lantency
+* functional unit is "NEGATIVE ONE" means that it is not belong to any functional unit
+* lantency is "ZERO" means that the lantency of this instruction is ignored in cost model
+* memory related lantency should be set to the processing time BEFORE checking cache hit/miss and transmission in NoC
+Ret            : -1 0
+Br             : -1 0
+Switch         : -1 0
+IndirectBr     : -1 0
+Invoke         : -1 0
+Resume         : -1 0
+Unreachable    : -1 0
+CleanupRet     : -1 0
+CatchRet       : -1 0
+CatchSwitch    : -1 0
+CallBr         : -1 0
+FNeg           : -1 0
+Add            :  0 1
+FAdd           :  5 5
+Sub            :  0 1
+FSub           :  5 5
+Mul            :  1 4
+FMul           :  6 4
+UDiv           :  2 16
+SDiv           :  2 16
+FDiv           :  7 16
+URem           :  2 16
+SRem           :  2 16
+FRem           :  7 16
+Shl            :  3 1
+LShr           :  3 1
+AShr           :  3 1
+And            :  4 1
+Or             :  4 1
+Xor            :  4 1
+Alloca         : -1 0
+Load           : -1 0
+Store          : -1 0
+GetElementPtr  : -1 0
+Fence          : -1 0
+AtomicCmpXchg  : -1 0
+AtomicRMW      : -1 0
+Trunc          : -1 0
+ZExt           : -1 0
+SExt           : -1 0
+FPToUI         : -1 0
+FPToSI         : -1 0
+UIToFP         : -1 0
+SIToFP         : -1 0
+FPTrunc        : -1 0
+FPExt          : -1 0
+PtrToInt       : -1 0
+IntToPtr       : -1 0
+BitCast        : -1 0
+AddrSpaceCast  : -1 0
+CleanupPad     : -1 0
+CatchPad       : -1 0
+ICmp           : -1 0
+FCmp           : -1 0
+PHI            : -1 0
+Call           : -1 0
+Select         : -1 0
+UserOpONE      : -1 0
+UserOpTWO      : -1 0
+VAArg          : -1 0
+ExtractElement : -1 0
+InsertElement  : -1 0
+ShuffleVector  : -1 0
+ExtractValue   : -1 0
+InsertValue    : -1 0
+LandingPad     : -1 0
+Freeze         : -1 0

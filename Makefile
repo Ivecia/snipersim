@@ -97,6 +97,9 @@ endif
 ifeq ($(BUILD_ARM),1)
 	@echo -n " and arm64"
 endif
+ifeq ($(BUILD_LLVM),1)
+	@echo -n " and LLVM"
+endif
 	@echo ""
 
 $(STANDALONE): $(LIB_CARBON) $(LIB_SIFT) $(LIB_DECODER)

@@ -22,6 +22,10 @@ ifeq ($(BUILD_ARM),0)
 OBJECTS:=$(filter-out arm%,$(OBJECTS))
 endif
 
+ifeq ($(BUILD_LLVM),0)
+OBJECTS:=$(filter-out llvm%,$(OBJECTS))
+endif
+
 all : $(TARGET) 
 
 include ../common/Makefile.common

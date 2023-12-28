@@ -38,15 +38,21 @@ else
 CXXFLAGS += -DSNIPER_ARM=1
 endif
 
+ifeq ($(BUILD_LLVM),0)
+CXXFLAGS += -DSNIPER_LLVM=0
+else
+CXXFLAGS += -DSNIPER_LLVM=1
+endif
+
 include $(SIM_ROOT)/Makefile.config
 
 ifneq ($(BOOST_INCLUDE),)
 	CPPFLAGS += -I$(BOOST_INCLUDE)
 endif
 
-LD_LIBS += -ldecoder -lsift -lxed -L$(SIM_ROOT)/python_kit/$(SNIPER_TARGET_ARCH)/lib -lpython2.7 -lrt -lz -lsqlite3
+LD_LIBS += -ldecoder -lsift -lxed -L$(SIM_ROOT)/python_kit/$(SNIPER_TARGET_ARCH)/lib -lpython2.7 -lrt -lz -lsqlite3 $(shell llvm-config --libs)
 
-LD_FLAGS += -L$(SIM_ROOT)/lib -L$(SIM_ROOT)/decoder_lib/ -L$(SIM_ROOT)/sift -L$(XED_HOME)/lib
+LD_FLAGS += -L$(SIM_ROOT)/lib -L$(SIM_ROOT)/decoder_lib/ -L$(SIM_ROOT)/sift -L$(XED_HOME)/lib $(shell llvm-config --ldflags)
 
 ifneq ($(SQLITE_PATH),)
 	CPPFLAGS += -I$(SQLITE_PATH)/include
@@ -58,10 +64,11 @@ export LD_LIBRARY_PATH := $(SIM_ROOT)/lib:$(LD_LIBRARY_PATH)
 # Include paths
 CPPFLAGS+=$(foreach dir,$(INCLUDE_DIRECTORIES),-I$(dir)) \
           -I$(SIM_ROOT)/python_kit/$(SNIPER_TARGET_ARCH)/include/python2.7 \
-          -I$(SIM_ROOT)/capstone/include -I$(SIM_ROOT)/capstone/include/capstone 
+          -I$(SIM_ROOT)/capstone/include -I$(SIM_ROOT)/capstone/include/capstone \
+		  $(shell llvm-config --cxxflags)
 
 CXXFLAGS+=-c \
-          -Wall -Wextra -Wcast-align -Wno-unused-parameter -Wno-unknown-pragmas -std=c++11 -fno-strict-aliasing $(OPT_CFLAGS) #-Werror	  
+          -Wall -Wextra -Wcast-align -Wno-unused-parameter -Wno-unknown-pragmas -std=c++11 -fno-strict-aliasing -fexceptions $(OPT_CFLAGS) #-Werror	  
 #CXXFLAGS+=-I$(SIM_ROOT)/rv8/src
 #CXXFLAGS+=-I$(SIM_ROOT)/rv8
 

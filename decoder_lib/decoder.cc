@@ -6,6 +6,9 @@
 #if SNIPER_ARM
 #include "arm_decoder.h"
 #endif
+#if SNIPER_LLVM
+#include "llvm_decoder.h"
+#endif
 
 namespace dl 
 {
@@ -78,7 +81,13 @@ Decoder *DecoderFactory::CreateDecoder(dl_arch arch, dl_mode mode, dl_syntax syn
       return new ARMDecoder(arch, mode, syntax);
 #else
       return NULL;
-#endif 
+#endif
+    case DL_ARCH_LLVM:
+#if SNIPER_LLVM
+      return new LLVMDecoder(arch, mode, syntax);
+#else
+      return NULL;
+#endif
   }
   return NULL;
 }
@@ -101,6 +110,12 @@ DecodedInst *DecoderFactory::CreateInstruction(Decoder * d, const uint8_t * code
     case DL_ARCH_ARMv8:
 #if SNIPER_ARM
       return new ARMDecodedInst(d, code, size, addr);
+#else
+      return NULL;
+#endif
+    case DL_ARCH_LLVM:
+#if SNIPER_LLVM
+      return new LLVMDecodedInst(d, code, size, addr);
 #else
       return NULL;
 #endif

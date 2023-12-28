@@ -14,7 +14,8 @@ typedef enum dl_arch {
   DL_ARCH_INTEL,
   DL_ARCH_RISCV,
   DL_ARCH_ARMv7,
-  DL_ARCH_ARMv8
+  DL_ARCH_ARMv8,
+  DL_ARCH_LLVM
 } dl_arch;
 
 /// Supported modes
@@ -28,7 +29,8 @@ typedef enum dl_syntax {
   DL_SYNTAX_DEFAULT,
   DL_SYNTAX_INTEL,
   DL_SYNTAX_ATT,
-  DL_SYNTAX_XED
+  DL_SYNTAX_XED,
+  DL_SYNTAX_LLVM
 } dl_syntax;
 
 /// Supported ISAs / processor modes
@@ -39,7 +41,8 @@ typedef enum dl_isa {
   DL_ISA_ARM32,   // ARM ISA on ARMv7 architecture
   DL_ISA_THUMB,   // ARM's Thumb and Thumb2
   DL_ISA_AARCH64,
-  DL_ISA_V8_32   // ARMv8 32-bit mode
+  DL_ISA_V8_32,   // ARMv8 32-bit mode
+  DL_ISA_LLVM
 } dl_isa;
   
 class DecodedInst;
