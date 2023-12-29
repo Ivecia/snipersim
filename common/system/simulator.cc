@@ -60,6 +60,8 @@ void Simulator::createDecoder()
         dla = dl::DL_ARCH_INTEL;
       else if (architecture == "riscv")
         dla = dl::DL_ARCH_RISCV;
+      else if (architecture == "llvm")
+        dla = dl::DL_ARCH_LLVM;
       else
         LOG_PRINT_ERROR("Unknown architecture %s, should be intel or arm.", architecture.c_str());
       // Get mode
@@ -82,6 +84,8 @@ void Simulator::createDecoder()
         dls = dl::DL_SYNTAX_ATT;
       else if (syntax == "xed")
         dls = dl::DL_SYNTAX_XED;
+      else if (syntax == "llvm")
+        dls = dl::DL_SYNTAX_LLVM;
       else
         LOG_PRINT_ERROR("Unknown assembly syntax %s, should be intel, att or xed.", syntax.c_str());
 
