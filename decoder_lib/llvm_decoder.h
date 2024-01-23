@@ -106,7 +106,7 @@ class LLVMDecodedInst : public DecodedInst
     LLVMDecodedInst(Decoder *d, const uint8_t *code, size_t size, uint64_t address);
     // virtual ~LLVMDecodedInst();    // dtor
 
-    void set_llvm_instruction(llvm::Instruction inst);
+    void set_llvm_instruction(llvm::Instruction *inst);
     llvm::Instruction* get_llvm_instruction();
 
     // Get the instruction numerical Id

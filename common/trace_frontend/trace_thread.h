@@ -6,6 +6,9 @@
 #include "thread.h"
 #include "core.h"
 #include "sift_reader.h"
+#if SNIPER_LLVM
+#include "llvm_reader.h"
+#endif
 #include "operand.h"
 #include "semaphore.h"
 
@@ -50,6 +53,9 @@ class TraceThread : public Runnable
       Thread *m_thread;
       SubsecondTime m_time_start;
       Sift::Reader m_trace;
+#if SNIPER_LLVM
+      Sift::LLVMReader m_llvm;
+#endif
       bool m_trace_has_pa;
       bool m_address_randomization;
       bool m_appid_from_coreid;

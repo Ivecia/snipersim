@@ -19,6 +19,7 @@ void LLVMDecoder::decode(DecodedInst *inst)
 {
   if (inst->get_already_decoded())
     return;
+  ((LLVMDecodedInst*)inst)->set_llvm_instruction((llvm::Instruction*)inst->get_address());
   instid[((LLVMDecodedInst*)inst)->get_llvm_instruction()] = ++total_inst;
   inst->set_already_decoded(true);
 }
@@ -77,7 +78,7 @@ unsigned int LLVMDecoder::num_operands(const DecodedInst *inst)
   llvm::Instruction *i = ((LLVMDecodedInst*)inst)->get_llvm_instruction();
   // Normal instruction: i->getNumOperands() + 1
   // Store instruction: i->getNumOperands() (will not be a source)
-  ret = i->getNumOperands() + (i->getOpcode() != llvm::Instruction::Store);
+  ret = i->getNumOperands() + (i->getOpcode() != llvm::Instruction::Store && i->getOpcode() != llvm::Instruction::Br);
   return ret;
 }
 
@@ -311,9 +312,9 @@ LLVMDecodedInst::LLVMDecodedInst(Decoder *d, const uint8_t *code, size_t size, u
   this->m_already_decoded = false;
 }
 
-void LLVMDecodedInst::set_llvm_instruction(llvm::Instruction inst)
+void LLVMDecodedInst::set_llvm_instruction(llvm::Instruction *inst)
 {
-  this->i = inst.clone();
+  this->i = inst;
 }
 
 llvm::Instruction* LLVMDecodedInst::get_llvm_instruction()
@@ -364,7 +365,7 @@ bool LLVMDecodedInst::is_conditional_branch() const
   bool ret = false;
   switch (this->i->getOpcode()) {
     case llvm::Instruction::Br:
-      ret = true;
+      ret = (this->i->getNumOperands() == 3);
       break;
   }
   return ret;
