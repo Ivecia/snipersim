@@ -1,5 +1,6 @@
 SOURCES=$(filter-out siftdump.cc,$(wildcard *.cc))
-OBJECTS=$(patsubst %.cc,%.o,$(SOURCES))
+NOLLVM=$(filter-out llvm_reader.cc,$(wildcard *.cc))
+OBJECTS=$(patsubst %.cc,%.o,$(NOLLVM))
 
 ROOT_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 

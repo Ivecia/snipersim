@@ -29,7 +29,7 @@ void LLVMDecoder::decode(DecodedInst *inst, dl_isa isa)
   this->decode(inst);
 }
 
-// Change the ISA mode to new_mode
+// Change the ISA mode to new_mode (not be used)
 void LLVMDecoder::change_isa_mode(dl_isa new_isa)
 {
   this->m_isa = new_isa;
@@ -47,25 +47,28 @@ const char* LLVMDecoder::reg_name(unsigned int reg_id)
   return ("%" + std::to_string(reg_id)).c_str();
 }
 
-// X86: not used in LLVM
+// X86: not be used in LLVM
 Decoder::decoder_reg LLVMDecoder::largest_enclosing_register(Decoder::decoder_reg r)
 {
   return r;
 }
 
-// Check if this register is invalid
+// check if the register is invalid, not be used in LLVM
+// MAY BE used in old version of sniper, at common/performance_model/performance_models/micro_op/instruction_decoder_wlib.cc
 bool LLVMDecoder::invalid_register(decoder_reg r)
 {
   return true;
 }
 
 // Check if this register holds the program counter
+// LLVM does not holds the program counter in registers
 bool LLVMDecoder::reg_is_program_counter(decoder_reg r)
 {
   return false;
 }
 
-// True if instruction belongs to instruction group/category (ignore)
+// True if instruction belongs to instruction group/category
+// TODO: Ignored for now, may not be used in LLVM
 bool LLVMDecoder::inst_in_group(const DecodedInst *inst, unsigned int group_id)
 {
   return true;
@@ -77,7 +80,7 @@ unsigned int LLVMDecoder::num_operands(const DecodedInst *inst)
   unsigned int ret = 0;
   llvm::Instruction *i = ((LLVMDecodedInst*)inst)->get_llvm_instruction();
   // Normal instruction: i->getNumOperands() + 1
-  // Store instruction: i->getNumOperands() (will not be a source)
+  // Store/Br instruction: i->getNumOperands()
   ret = i->getNumOperands() + (i->getOpcode() != llvm::Instruction::Store && i->getOpcode() != llvm::Instruction::Br);
   return ret;
 }
@@ -99,6 +102,7 @@ unsigned int LLVMDecoder::num_memory_operands(const DecodedInst *inst)
 // Get the base register of the memory operand pointed by mem_idx
 Decoder::decoder_reg LLVMDecoder::mem_base_reg(const DecodedInst *inst, unsigned int mem_idx)
 {
+  // mem_idx does not be used in this function.
   Decoder::decoder_reg ret = 0;
   llvm::Instruction *i = ((LLVMDecodedInst*)inst)->get_llvm_instruction();
   switch (i->getOpcode()) {
@@ -113,18 +117,21 @@ Decoder::decoder_reg LLVMDecoder::mem_base_reg(const DecodedInst *inst, unsigned
 }
 
 // Check if the base register of the memory operand pointed by mem_idx is also updated
+// TODO: Ignored for now, may not be used in LLVM
 bool LLVMDecoder::mem_base_upate(const DecodedInst *inst, unsigned int mem_idx)
 {
   return false;
 }
 
 // Check if the memory operand pointed by mem_idx has an index register
+// TODO: Ignored for now, may not be used in LLVM
 bool LLVMDecoder::has_index_reg(const DecodedInst *inst, unsigned int mem_idx)
 {
   return false;
 }
 
 // Get the index register of the memory operand pointed by mem_idx
+// TODO: Ignored for now, may not be used in LLVM
 Decoder::decoder_reg LLVMDecoder::mem_index_reg(const DecodedInst *inst, unsigned int mem_idx)
 {
   return 0;
@@ -133,6 +140,7 @@ Decoder::decoder_reg LLVMDecoder::mem_index_reg(const DecodedInst *inst, unsigne
 // Check if the operand mem_idx from instruction inst is read from memory
 bool LLVMDecoder::op_read_mem(const DecodedInst *inst, unsigned int mem_idx)
 {
+  // mem_idx does not be used in this function.
   bool ret = false;
   llvm::Instruction *i = ((LLVMDecodedInst*)inst)->get_llvm_instruction();
   switch (i->getOpcode()) {
@@ -146,6 +154,7 @@ bool LLVMDecoder::op_read_mem(const DecodedInst *inst, unsigned int mem_idx)
 // Check if the operand mem_idx from instruction inst is written to memory
 bool LLVMDecoder::op_write_mem(const DecodedInst *inst, unsigned int mem_idx)
 {
+  // mem_idx does not be used in this function.
   bool ret = false;
   llvm::Instruction *i = ((LLVMDecodedInst*)inst)->get_llvm_instruction();
   switch (i->getOpcode()) {
@@ -179,12 +188,14 @@ bool LLVMDecoder::op_write_reg(const DecodedInst *inst, unsigned int idx)
 }
 
 // Check if the operand idx from instruction inst is involved in an address generation operation
+// TODO: Ignored for now, may not be used in LLVM
 bool LLVMDecoder::is_addr_gen(const DecodedInst *inst, unsigned int idx)
 {
   return false;
 }
 
 // Check if the operand idx from instruction inst is a register
+// LLVM: using instruction id to represent the register (because of SSA)
 bool LLVMDecoder::op_is_reg(const DecodedInst *inst, unsigned int idx)
 {
   bool ret = false;
@@ -213,11 +224,31 @@ Decoder::decoder_reg LLVMDecoder::get_op_reg(const DecodedInst *inst, unsigned i
 // Get the size in bytes of the memory operand pointed by mem_idx
 unsigned int LLVMDecoder::size_mem_op(const DecodedInst *inst, unsigned int mem_idx)
 {
-  // TODO
   return 4;
+  // mem_idx does not be used in this function.
+  // llvm::Instruction *i = ((LLVMDecodedInst*)inst)->get_llvm_instruction();
+  // llvm::Type *t = nullptr;
+  // switch (i->getOpcode()) {
+  //   case llvm::Instruction::Load:
+  //     t = nullptr;
+  //     break;
+  //   case llvm::Instruction::Store:
+  //     t = i->getOperand(0)->getType();
+  //     break;
+  // }
+  // if (t->isIntegerTy()) {
+  //   return t->getIntegerBitWidth() / 8;
+  // }
+  // // should not reach here...
+  // i->dump();
+  // i->getOperand(1)->dump();
+  // i->getOperand(1)->getType()->dump();
+  // assert(false);
+  // return 0;
 }
 
 // Get the number of execution micro operations contained in instruction 'ins' 
+// MAY BE used in old version of sniper, at common/performance_model/performance_models/micro_op/instruction_decoder_wlib.cc
 unsigned int LLVMDecoder::get_exec_microops(const DecodedInst *ins, int numLoads, int numStores)
 {
   // TODO
@@ -225,6 +256,7 @@ unsigned int LLVMDecoder::get_exec_microops(const DecodedInst *ins, int numLoads
 }
 
 // Get the maximum size of the operands of instruction inst in bits
+// MAY BE used in old version of sniper, at common/performance_model/performance_models/micro_op/instruction_decoder_wlib.cc
 uint16_t LLVMDecoder::get_operand_size(const DecodedInst *ins)
 {
   // TODO
@@ -232,6 +264,7 @@ uint16_t LLVMDecoder::get_operand_size(const DecodedInst *ins)
 }
 
 // Check if the opcode is an instruction that performs a cache flush
+// TODO: Ignored for now, may not be used in LLVM
 bool LLVMDecoder::is_cache_flush_opcode(decoder_opcode opcd)
 {
   return false;
@@ -269,10 +302,31 @@ bool LLVMDecoder::is_branch_opcode(decoder_opcode opcd)
 }
 
 // Check if the opcode is an add/sub instruction that operates in vector and FP registers
-bool LLVMDecoder::is_fpvector_addsub_opcode(decoder_opcode opcd, const DecodedInst* ins) { return false; }
+bool LLVMDecoder::is_fpvector_addsub_opcode(decoder_opcode opcd, const DecodedInst* ins)
+{
+  bool ret = false;
+  switch (opcd) {
+    case llvm::Instruction::FAdd:
+    case llvm::Instruction::FSub:
+      ret = true;
+      break;
+  }
+  return ret;
+}
 
 // Check if the opcode is a mul/div instruction that operates in vector and FP registers
-bool LLVMDecoder::is_fpvector_muldiv_opcode(decoder_opcode opcd, const DecodedInst* ins) { return false; }
+bool LLVMDecoder::is_fpvector_muldiv_opcode(decoder_opcode opcd, const DecodedInst* ins)
+{
+  bool ret = false;
+  switch (opcd) {
+    case llvm::Instruction::FMul:
+    case llvm::Instruction::FDiv:
+    case llvm::Instruction::FRem:
+      ret = true;
+      break;
+  }
+  return ret;
+}
 
 // Check if the opcode is an instruction that loads or store data on vector and FP registers
 bool LLVMDecoder::is_fpvector_ldst_opcode(decoder_opcode opcd, const DecodedInst* ins) { return false; }
