@@ -14,8 +14,12 @@
 
 std::map<String, const CoreModel*> CoreModel::s_core_models;
 
-const CoreModel* CoreModel::getCoreModel(String type)
+const CoreModel* CoreModel::getCoreModel(String type, Diy::DiyTool *tool)
 {
+#if SNIPER_LLVM
+   if (type == "llvm")
+      return new CoreModelLLVM(tool);
+#endif /* SNIPER_LLVM */
    if (!s_core_models.count(type))
    {
       if (type == "nehalem")
@@ -30,10 +34,6 @@ const CoreModel* CoreModel::getCoreModel(String type)
       else if (type == "cortex-a53")
          s_core_models[type] = new CoreModelCortexA53();
 #endif /* SNIPER_ARM */
-#if SNIPER_LLVM
-      else if (type == "llvm")
-         s_core_models[type] = new CoreModelLLVM();
-#endif /* SNIPER_LLVM */
       else
          LOG_PRINT_ERROR("Unknown core model %s", type.c_str());
    }

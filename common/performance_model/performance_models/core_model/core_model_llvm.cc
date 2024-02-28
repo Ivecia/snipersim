@@ -9,21 +9,31 @@
 #include <decoder.h>
 #include "llvm_meta.h"
 
-CoreModelLLVM::CoreModelLLVM()
+CoreModelLLVM::CoreModelLLVM(Diy::DiyTool *tool)
 {
-   printf("Enabled LLVM Core Model...");
+   printf("Enabled LLVM Core Model...\n");
+   diy = tool;
+   if (tool) {
+      printf("Enabled [[[DIY]]] LLVM Core Model...\n");
+   }
    m_lll_cutoff = Sim()->getCfg()->getInt("perf_model/core/interval_timer/lll_cutoff");
 }
 
 unsigned int CoreModelLLVM::getInstructionLatency(const MicroOp *uop) const
 {
+   // dynamic_micro_op.cc
    unsigned int instruction_type = (unsigned int) uop->getInstructionOpcode();
+   uint32_t op = instruction_type;
+   if (op > 100) {
+      return diy->get_latency(op - 100);
+   }
    LOG_ASSERT_ERROR(instruction_type > 0 && instruction_type < 68, "Invalid instruction type %d", instruction_type);
    return 1;
 }
 
 unsigned int CoreModelLLVM::getAluLatency(const MicroOp *uop) const
 {
+   // rob model
    switch(uop->uop_type)
    {
       case MicroOp::UOP_EXECUTE:
@@ -44,6 +54,10 @@ unsigned int CoreModelLLVM::getAluLatency(const MicroOp *uop) const
             case llvm_op_FRem:
                return 12;
             default:
+               uint32_t op = uop->getInstructionOpcode();
+               if (op > 100) {
+                  return diy->get_latency(op - 100);
+               }
                return 1;
          }
       default:

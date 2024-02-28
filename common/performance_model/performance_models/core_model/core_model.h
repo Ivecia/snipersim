@@ -20,7 +20,7 @@ class CoreModel
       static std::map<String, const CoreModel*> s_core_models;
 
    public:
-      static const CoreModel* getCoreModel(String type);
+      static const CoreModel* getCoreModel(String type, Diy::DiyTool *tool);
 
       virtual IntervalContention* createIntervalContentionModel(const Core *core) const = 0;
       virtual unsigned int getLongLatencyCutoff() const = 0;

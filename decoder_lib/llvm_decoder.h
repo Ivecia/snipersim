@@ -2,6 +2,7 @@
 #define _LLVM_DECODER_H_
 
 #include "decoder.h"
+#include <diy.h>
 
 #include <llvm/IR/Instruction.h>
 #include <llvm/IR/IRBuilder.h>
@@ -17,6 +18,8 @@ class LLVMDecoder : public Decoder
   public:
     LLVMDecoder(dl_arch arch, dl_mode mode, dl_syntax syntax);
     virtual ~LLVMDecoder();
+
+    void setDiy(Diy::DiyTool *tool) override;
 
     virtual void decode(DecodedInst *inst) override;
     void decode(DecodedInst *inst, dl_isa isa) override;
@@ -98,6 +101,7 @@ class LLVMDecoder : public Decoder
     unsigned int total_inst = 0;
     std::map<llvm::Instruction*, Decoder::decoder_reg> instid;
 
+    Diy::DiyTool *diy;
 };
 
 class LLVMDecodedInst : public DecodedInst
@@ -106,7 +110,7 @@ class LLVMDecodedInst : public DecodedInst
     LLVMDecodedInst(Decoder *d, const uint8_t *code, size_t size, uint64_t address);
     // virtual ~LLVMDecodedInst();    // dtor
 
-    void set_llvm_instruction(llvm::Instruction *inst);
+    void set_llvm_instruction(llvm::Instruction *inst, Diy::DiyTool *tool);
     llvm::Instruction* get_llvm_instruction();
 
     // Get the instruction numerical Id
@@ -140,6 +144,7 @@ class LLVMDecodedInst : public DecodedInst
 
   private:
     llvm::Instruction *i;
+    Diy::DiyTool *diy;
 };
 }
 

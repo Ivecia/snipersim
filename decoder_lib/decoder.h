@@ -3,6 +3,7 @@
 
 #include <string>
 #include <cassert>
+#include <diy.h>
 
 namespace dl
 {
@@ -60,6 +61,9 @@ class Decoder
     virtual ~Decoder();  // dtor
     virtual void decode(DecodedInst * inst) = 0;  // pure virtual method; implement in subclass
     virtual void decode(DecodedInst * inst, dl_isa isa) = 0;
+
+    virtual void setDiy(Diy::DiyTool *tool) {
+    };
     
     /// Change the ISA mode to new_mode
     virtual void change_isa_mode(dl_isa new_isa) = 0;

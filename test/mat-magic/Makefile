@@ -2,6 +2,6 @@ TARGET=magic
 include ../shared/Makefile.shared
 
 run_$(TARGET):
-	../../run-sniper -v -c llvm --llvm-bench=$(shell pwd)/magic.ll --traces=trace.txt,trace.txt,trace.txt
+	../../run-sniper -v -c llvm --llvm-bench=magic.ll --diy=diy.txt --traces=trace.txt
 
 CLEAN_EXTRA=viz

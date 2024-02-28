@@ -15,11 +15,16 @@ LLVMDecoder::~LLVMDecoder()
 {
 }
 
+void LLVMDecoder::setDiy(Diy::DiyTool *tool)
+{
+  diy = tool;
+}
+
 void LLVMDecoder::decode(DecodedInst *inst)
 {
   if (inst->get_already_decoded())
     return;
-  ((LLVMDecodedInst*)inst)->set_llvm_instruction((llvm::Instruction*)inst->get_address());
+  ((LLVMDecodedInst*)inst)->set_llvm_instruction((llvm::Instruction*)inst->get_address(), diy);
   instid[((LLVMDecodedInst*)inst)->get_llvm_instruction()] = ++total_inst;
   inst->set_already_decoded(true);
 }
@@ -38,6 +43,10 @@ void LLVMDecoder::change_isa_mode(dl_isa new_isa)
 // Get the instruction name from the numerical (enum) instruction Id
 const char* LLVMDecoder::inst_name(unsigned int inst_id)
 {
+  // [Diy] let instruction with opcode > 100 to be special instruction
+  if (inst_id > 100) {
+    return ("Special Opcode " + std::to_string(inst_id - 100)).c_str();
+  }
   return llvm::Instruction::getOpcodeName(inst_id);
 }
 
@@ -79,6 +88,11 @@ unsigned int LLVMDecoder::num_operands(const DecodedInst *inst)
 {
   unsigned int ret = 0;
   llvm::Instruction *i = ((LLVMDecodedInst*)inst)->get_llvm_instruction();
+  // [Diy]
+  uint32_t op = diy->request_op(i);
+  if (op) {
+    return diy->num_operands(op);
+  }
   // Normal instruction: i->getNumOperands() + 1
   // Store/Br instruction: i->getNumOperands()
   ret = i->getNumOperands() + (i->getOpcode() != llvm::Instruction::Store && i->getOpcode() != llvm::Instruction::Br);
@@ -90,6 +104,11 @@ unsigned int LLVMDecoder::num_memory_operands(const DecodedInst *inst)
 {
   unsigned int ret = 0;
   llvm::Instruction *i = ((LLVMDecodedInst*)inst)->get_llvm_instruction();
+  // [Diy]
+  uint32_t op = diy->request_op(i);
+  if (op) {
+    return 0;
+  }
   switch (i->getOpcode()) {
     case llvm::Instruction::Load:
     case llvm::Instruction::Store:
@@ -105,6 +124,11 @@ Decoder::decoder_reg LLVMDecoder::mem_base_reg(const DecodedInst *inst, unsigned
   // mem_idx does not be used in this function.
   Decoder::decoder_reg ret = 0;
   llvm::Instruction *i = ((LLVMDecodedInst*)inst)->get_llvm_instruction();
+  // [Diy]
+  uint32_t op = diy->request_op(i);
+  if (op) {
+    return 0;
+  }
   switch (i->getOpcode()) {
     case llvm::Instruction::Load:
       ret = instid[llvm::dyn_cast<llvm::Instruction>(i->getOperand(0))];
@@ -143,6 +167,11 @@ bool LLVMDecoder::op_read_mem(const DecodedInst *inst, unsigned int mem_idx)
   // mem_idx does not be used in this function.
   bool ret = false;
   llvm::Instruction *i = ((LLVMDecodedInst*)inst)->get_llvm_instruction();
+  // [Diy]
+  uint32_t op = diy->request_op(i);
+  if (op) {
+    return false;
+  }
   switch (i->getOpcode()) {
     case llvm::Instruction::Load:
       ret = true;
@@ -157,6 +186,11 @@ bool LLVMDecoder::op_write_mem(const DecodedInst *inst, unsigned int mem_idx)
   // mem_idx does not be used in this function.
   bool ret = false;
   llvm::Instruction *i = ((LLVMDecodedInst*)inst)->get_llvm_instruction();
+  // [Diy]
+  uint32_t op = diy->request_op(i);
+  if (op) {
+    return false;
+  }
   switch (i->getOpcode()) {
     case llvm::Instruction::Store:
       ret = true;
@@ -170,6 +204,11 @@ bool LLVMDecoder::op_read_reg(const DecodedInst *inst, unsigned int idx)
 {
   bool ret = false;
   llvm::Instruction *i = ((LLVMDecodedInst*)inst)->get_llvm_instruction();
+  // [Diy]
+  uint32_t op = diy->request_op(i);
+  if (op) {
+    return false;
+  }
   if (idx < i->getNumOperands()) {
     ret = llvm::dyn_cast<llvm::Instruction>(i->getOperand(idx));
   }
@@ -181,6 +220,11 @@ bool LLVMDecoder::op_write_reg(const DecodedInst *inst, unsigned int idx)
 {
   bool ret = false;
   llvm::Instruction *i = ((LLVMDecodedInst*)inst)->get_llvm_instruction();
+  // [Diy]
+  uint32_t op = diy->request_op(i);
+  if (op) {
+    return false;
+  }
   if (idx == i->getNumOperands()) {
     ret = true;
   }
@@ -200,6 +244,11 @@ bool LLVMDecoder::op_is_reg(const DecodedInst *inst, unsigned int idx)
 {
   bool ret = false;
   llvm::Instruction *i = ((LLVMDecodedInst*)inst)->get_llvm_instruction();
+  // [Diy]
+  uint32_t op = diy->request_op(i);
+  if (op) {
+    return diy->op_is_reg(op, idx);
+  }
   if (idx < i->getNumOperands()) {
     ret = llvm::dyn_cast<llvm::Instruction>(i->getOperand(idx));
   } else if (idx == i->getNumOperands()) {
@@ -213,6 +262,11 @@ Decoder::decoder_reg LLVMDecoder::get_op_reg(const DecodedInst *inst, unsigned i
 {
   Decoder::decoder_reg ret = 0;
   llvm::Instruction *i = ((LLVMDecodedInst*)inst)->get_llvm_instruction();
+  // [Diy]
+  uint32_t op = diy->request_op(i);
+  if (op) {
+    return instid[diy->get_op_reg(op, idx)];
+  }
   if (idx < i->getNumOperands()) {
     ret = instid[llvm::dyn_cast<llvm::Instruction>(i->getOperand(idx))];
   } else if (idx == i->getNumOperands()) {
@@ -222,6 +276,7 @@ Decoder::decoder_reg LLVMDecoder::get_op_reg(const DecodedInst *inst, unsigned i
 }
 
 // Get the size in bytes of the memory operand pointed by mem_idx
+// [TODO]: there are some errors exist here, and cannot find ways to solve them.
 unsigned int LLVMDecoder::size_mem_op(const DecodedInst *inst, unsigned int mem_idx)
 {
   return 4;
@@ -251,8 +306,7 @@ unsigned int LLVMDecoder::size_mem_op(const DecodedInst *inst, unsigned int mem_
 // MAY BE used in old version of sniper, at common/performance_model/performance_models/micro_op/instruction_decoder_wlib.cc
 unsigned int LLVMDecoder::get_exec_microops(const DecodedInst *ins, int numLoads, int numStores)
 {
-  // TODO
-  return 1;
+  return (numLoads + numStores == 0 ? 1 : 0);
 }
 
 // Get the maximum size of the operands of instruction inst in bits
@@ -366,9 +420,10 @@ LLVMDecodedInst::LLVMDecodedInst(Decoder *d, const uint8_t *code, size_t size, u
   this->m_already_decoded = false;
 }
 
-void LLVMDecodedInst::set_llvm_instruction(llvm::Instruction *inst)
+void LLVMDecodedInst::set_llvm_instruction(llvm::Instruction *inst, Diy::DiyTool *tool)
 {
   this->i = inst;
+  this->diy = tool;
 }
 
 llvm::Instruction* LLVMDecodedInst::get_llvm_instruction()
@@ -379,12 +434,22 @@ llvm::Instruction* LLVMDecodedInst::get_llvm_instruction()
 // Get the instruction numerical Id
 unsigned int LLVMDecodedInst::inst_num_id() const
 {
+  // [Diy]
+  uint32_t op = diy->request_op(this->i);
+  if (op) {
+    return 100 + op;
+  }
   return this->i->getOpcode();
 }
 
 // Get an string with the disassembled instruction
 std::string LLVMDecodedInst::disassembly_to_str() const
 {
+  // [Diy]
+  uint32_t op = diy->request_op(this->i);
+  if (op) {
+    return "Special Instruction";
+  }
   std::string ret;
   llvm::raw_string_ostream raw_stream(ret);
   this->i->print(raw_stream);

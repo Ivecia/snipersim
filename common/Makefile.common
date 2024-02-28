@@ -10,7 +10,7 @@ LIBCARBON_SOURCES = $(foreach dir,$(DIRECTORIES),$(wildcard $(dir)/*.cc)) \
 
 LIBCARBON_OBJECTS = $(patsubst %.cpp,%.o,$(patsubst %.c,%.o,$(patsubst %.cc,%.o,$(LIBCARBON_SOURCES) ) ) )
 
-INCLUDE_DIRECTORIES = $(DIRECTORIES) $(XED_HOME)/include/xed $(SIM_ROOT)/linux $(SIM_ROOT)/sift $(SIM_ROOT)/decoder_lib
+INCLUDE_DIRECTORIES = $(DIRECTORIES) $(XED_HOME)/include/xed $(SIM_ROOT)/linux $(SIM_ROOT)/diy_lib $(SIM_ROOT)/sift $(SIM_ROOT)/decoder_lib
 
 CLEAN=$(findstring clean,$(MAKECMDGOALS))
 
@@ -50,9 +50,9 @@ ifneq ($(BOOST_INCLUDE),)
 	CPPFLAGS += -I$(BOOST_INCLUDE)
 endif
 
-LD_LIBS += -ldecoder -lsift -lxed -L$(SIM_ROOT)/python_kit/$(SNIPER_TARGET_ARCH)/lib -lpython2.7 -lrt -lz -lsqlite3 $(shell llvm-config --libs)
+LD_LIBS += -ldiy -ldecoder -lsift -lxed -L$(SIM_ROOT)/python_kit/$(SNIPER_TARGET_ARCH)/lib -lpython2.7 -lrt -lz -lsqlite3 $(shell llvm-config --libs)
 
-LD_FLAGS += -L$(SIM_ROOT)/lib -L$(SIM_ROOT)/decoder_lib/ -L$(SIM_ROOT)/sift -L$(XED_HOME)/lib $(shell llvm-config --ldflags)
+LD_FLAGS += -L$(SIM_ROOT)/lib -L$(SIM_ROOT)/diy_lib/ -L$(SIM_ROOT)/decoder_lib/ -L$(SIM_ROOT)/sift -L$(XED_HOME)/lib $(shell llvm-config --ldflags)
 
 ifneq ($(SQLITE_PATH),)
 	CPPFLAGS += -I$(SQLITE_PATH)/include

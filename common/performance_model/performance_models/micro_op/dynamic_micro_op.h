@@ -38,7 +38,7 @@ class DynamicMicroOp
       /** This field contains the length of the dependencies array. */
       uint32_t dependenciesLength;
       /** This array contains the dependencies. The uint64_t stored in the array is the sequenceNumber of the dependency. */
-      uint64_t dependencies[MAXIMUM_NUMBER_OF_DEPENDENCIES];
+      uint64_t dependencies[200];   // for llvm
 
       /** The latency of the instruction. */
       uint32_t execLatency;

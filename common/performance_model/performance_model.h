@@ -12,6 +12,8 @@
 #include <queue>
 #include <iostream>
 
+#include <diy.h>
+
 // Forward Decls
 class Core;
 class BranchPredictor;
@@ -82,6 +84,8 @@ public:
       else
          disableDetailedModel();
    }
+
+   virtual void setDiyModel(Diy::DiyTool *tool) {};
 
 protected:
    friend class SpawnInstruction;

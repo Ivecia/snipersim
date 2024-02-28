@@ -33,7 +33,8 @@ TraceThread::TraceThread(Thread *thread, SubsecondTime time_start, String tracef
    , m_time_start(time_start)
    , m_trace(tracefile.c_str(), responsefile.c_str(), thread->getId())
 #if SNIPER_LLVM
-   , m_llvm(Sim()->getCfg()->getString("llvm/benchmark").c_str(), tracefile.c_str(), thread->getId())
+   , m_diy(Sim()->getCfg()->getString("llvm/benchmark").c_str(), Sim()->getCfg()->getString("llvm/diy").c_str(), thread->getId())
+   , m_llvm(tracefile.c_str(), thread->getId())
 #endif
    , m_trace_has_pa(false)
    , m_address_randomization(Sim()->getCfg()->getBool("traceinput/address_randomization"))
@@ -760,7 +761,9 @@ void TraceThread::run()
 
    // Open the trace (be sure to do this before potentially blocking on reschedule() as this causes deadlock)
 #if SNIPER_LLVM
-   m_llvm.init();
+   m_diy.init();
+   m_llvm.init(&m_diy);
+   Sim()->getDecoder()->setDiy(&m_diy);
    if (Sim()->getDecoder()->get_arch() != dl::DL_ARCH_LLVM) {
 #endif
       m_trace.initStream();
@@ -778,6 +781,9 @@ void TraceThread::run()
 
    Core *core = m_thread->getCore();
    PerformanceModel *prfmdl = core->getPerformanceModel();
+#if SNIPER_LLVM
+   prfmdl->setDiyModel(&m_diy);
+#endif
 
    Sift::Instruction inst, next_inst;
 

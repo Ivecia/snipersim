@@ -7,10 +7,11 @@
 class CoreModelLLVM : public BaseCoreModel<DynamicMicroOpLLVM>
 {
    private:
+      Diy::DiyTool *diy;
       unsigned int m_lll_cutoff;
 
    public:
-      CoreModelLLVM();
+      CoreModelLLVM(Diy::DiyTool *tool);
 
       virtual IntervalContention* createIntervalContentionModel(const Core *core) const;
       virtual RobContention* createRobContentionModel(const Core *core) const;

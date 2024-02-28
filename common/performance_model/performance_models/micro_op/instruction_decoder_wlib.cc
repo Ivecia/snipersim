@@ -145,6 +145,8 @@ const std::vector<const MicroOp*>* InstructionDecoder::decode(IntPtr address,  c
    if (totalMicroOps == 0) {
      numExecs = totalMicroOps = 1;
    }
+
+   // std::cerr << totalMicroOps << " " << numLoads << " " << numExecs << " " << numStores << std::endl;
    
    for(int index = 0; index < totalMicroOps; ++index)
    {
@@ -173,6 +175,7 @@ const std::vector<const MicroOp*>* InstructionDecoder::decode(IntPtr address,  c
       {      
          size_t execIndex = index - numLoads;
          LOG_ASSERT_ERROR(numExecs <= 2, "More than 2 exec uops"); 
+         // std::cerr << ins->inst_num_id() << std::endl;
          currentMicroOp->makeExecute(
                  execIndex
                , numLoads

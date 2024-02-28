@@ -12,11 +12,12 @@ const char* DynamicMicroOpLLVM::PortTypeString(DynamicMicroOpLLVM::uop_port_t po
 {
    switch(port)
    {
-      case UOP_NONE:   return "Port None";
-      case UOP_INT:    return "Port Int";
-      case UOP_FLOAT:  return "Port Float";
-      case UOP_MEM:    return "Port Mem";
-      case UOP_ALL:    return "Port ALL";
+      case UOP_NONE:       return "Port None";
+      case UOP_INT:        return "Port Int";
+      case UOP_FLOAT:      return "Port Float";
+      case UOP_MEM:        return "Port Mem";
+      case UOP_SPECIAL:    return "Port Special";
+      case UOP_ALL:        return "Port ALL";
       default:
          LOG_PRINT_ERROR("Unknown port type %d", port);
    }
@@ -24,6 +25,9 @@ const char* DynamicMicroOpLLVM::PortTypeString(DynamicMicroOpLLVM::uop_port_t po
 
 DynamicMicroOpLLVM::uop_port_t DynamicMicroOpLLVM::getPort(const MicroOp *uop)
 {
+   if (uop->getInstructionOpcode() > 100) {
+      return DynamicMicroOpLLVM::UOP_SPECIAL;
+   }
    switch (uop->getInstructionOpcode()) {
       case llvm_op_Add:
       case llvm_op_Sub:
@@ -62,6 +66,9 @@ DynamicMicroOpLLVM::uop_port_t DynamicMicroOpLLVM::getPort(const MicroOp *uop)
 
 DynamicMicroOpLLVM::uop_fu_t DynamicMicroOpLLVM::getFU(const MicroOp *uop)
 {
+   if (uop->getInstructionOpcode() > 100) {
+      return UOP_FU_SPECIAL;
+   }
    switch(uop->uop_type)
    {
       case MicroOp::UOP_LOAD:

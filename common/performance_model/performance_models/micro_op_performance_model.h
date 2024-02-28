@@ -21,6 +21,8 @@ public:
    MicroOpPerformanceModel(Core *core, bool issue_memops);
    ~MicroOpPerformanceModel();
 
+   virtual void setDiyModel(Diy::DiyTool *tool) override;
+
 protected:
    const CoreModel *m_core_model;
 

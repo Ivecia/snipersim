@@ -16,6 +16,8 @@
 
 #include <unordered_map>
 
+#include <diy.h>
+
 #define NUM_PAPI_COUNTERS 6
 
 #define PAPI_TOT_INS 0
@@ -54,6 +56,7 @@ class TraceThread : public Runnable
       SubsecondTime m_time_start;
       Sift::Reader m_trace;
 #if SNIPER_LLVM
+      Diy::DiyTool m_diy;
       Sift::LLVMReader m_llvm;
 #endif
       bool m_trace_has_pa;

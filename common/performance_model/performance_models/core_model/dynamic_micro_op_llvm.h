@@ -13,6 +13,7 @@ class DynamicMicroOpLLVM : public DynamicMicroOp
          UOP_INT,
          UOP_FLOAT,
          UOP_MEM,
+         UOP_SPECIAL,
          UOP_ALL,
          UOP_PORT_SIZE,
       };
@@ -25,6 +26,7 @@ class DynamicMicroOpLLVM : public DynamicMicroOp
          UOP_FU_FALU,         // float add & minus
          UOP_FU_FMDU,         // float mult & div
          UOP_FU_LSU,          // load & store
+         UOP_FU_SPECIAL,
          UOP_FU_SIZE,
       };
       uop_fu_t uop_fu;

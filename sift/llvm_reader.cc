@@ -5,9 +5,8 @@
 
 #define VERBOSE 100
 
-Sift::LLVMReader::LLVMReader(const char *benchmark_name, const char *trace_name, uint32_t id)
+Sift::LLVMReader::LLVMReader(const char *trace_name, uint32_t id)
 {
-  m_benchmark = strdup(benchmark_name);
   m_trace = strdup(trace_name);
   m_id = id;
 }
@@ -18,18 +17,13 @@ Sift::LLVMReader::~LLVMReader()
   free(m_trace);
 }
 
-bool Sift::LLVMReader::init()
+bool Sift::LLVMReader::init(Diy::DiyTool *tool)
 {
+  diy = tool;
+
   #if VERBOSE > 0
   std::cerr << "[DEBUG: " << m_id << "] LLVM Reader initializing..." << std::endl;
   #endif
-
-  bench = new std::ifstream(m_benchmark, std::ios::in);
-
-  if ((!bench->is_open()) || (!bench->good())) {
-    std::cerr << "[Sift-LLVMReader: " << m_id << "] Cannot open " << m_benchmark << "\n";
-    return false;
-  }
 
   trace = new std::ifstream(m_trace, std::ios::in);
 
@@ -38,24 +32,15 @@ bool Sift::LLVMReader::init()
     return false;
   }
 
-  context = new llvm::LLVMContext;
-  llvm::SMDiagnostic err;
-  mod = llvm::parseIRFile(m_benchmark, err, *context);
-
-  if (!mod) {
-    std::cerr << "[Sift-LLVMReader: " << m_id << "] Cannot parse IR file " << m_benchmark << "\n";
-    return false;
-  }
-
-  for (auto &func : *mod) {
-    if (func.isDeclaration() || func.getName() != "main")
-      continue;
-    pc = llvm::dyn_cast<llvm::Instruction>(func.getEntryBlock().begin());
-  }
+  pc = diy->get_init_pc();
 
   if (!pc) {
     std::cerr << "[Sift-LLVMReader: " << m_id << "] Cannot find the main function in " << m_benchmark << "\n";
     return false;
+  }
+  uint32_t op = diy->request_op(pc);
+  if (op) {
+    newop[op] = true;
   }
 
   #if VERBOSE > 0
@@ -65,7 +50,60 @@ bool Sift::LLVMReader::init()
   return true;
 }
 
-bool Sift::LLVMReader::Read(Instruction &inst)
+bool Sift::LLVMReader::pc_forward()
+{
+  unsigned int opcode = pc->getOpcode();
+  switch (opcode) {
+    case llvm::Instruction::Br:
+      if (pc->getNumOperands() == 1) {
+        // Unconditional branch
+        pc = llvm::dyn_cast<llvm::Instruction>(llvm::dyn_cast<llvm::BasicBlock>(pc->getOperand(0))->begin());
+      } else if (pc->getNumOperands() == 3) {
+        // Conditional branch
+        if (info) {
+          // True
+          pc = llvm::dyn_cast<llvm::Instruction>(llvm::dyn_cast<llvm::BasicBlock>(pc->getOperand(2))->begin());
+        } else {
+          // False
+          pc = llvm::dyn_cast<llvm::Instruction>(llvm::dyn_cast<llvm::BasicBlock>(pc->getOperand(1))->begin());
+        }
+      } else {
+        std::cerr << "[Sift-LLVMReader: " << m_id << "] llvm::Instruction::Br does not have neither 1 nor 3 operands..." << std::endl;
+        assert(false);
+      }
+      // clear new op list
+      newop.clear();
+      break;
+    default:
+      pc = pc->getNextNode();
+      break;
+  }
+  if (pc) return true;
+  return false;
+}
+
+bool Sift::LLVMReader::find_next()
+{
+  if (!pc_forward()) {
+    return false;
+  }
+  uint32_t op = diy->request_op(pc);
+  while (op) {
+    if (!newop[op]) {
+      newop[op] = true;
+      return true;
+    }
+    bool ret = pc_forward();
+    if (ret) {
+      op = diy->request_op(pc);
+    } else {
+      return false;
+    }
+  }
+  return true;
+}
+
+void Sift::LLVMReader::make_inst(Instruction &inst)
 {
   unsigned int opcode = pc->getOpcode();
   // StaticInstruction
@@ -110,32 +148,12 @@ bool Sift::LLVMReader::Read(Instruction &inst)
   // llvm::raw_string_ostream os(irString);
   // pc->print(os);
   // std::cerr << info << " " << irString << std::endl;
+}
 
-  // Moving pc to the next instruction
-  switch (opcode) {
-    case llvm::Instruction::Br:
-      if (pc->getNumOperands() == 1) {
-        // Unconditional branch
-        pc = llvm::dyn_cast<llvm::Instruction>(llvm::dyn_cast<llvm::BasicBlock>(pc->getOperand(0))->begin());
-      } else if (pc->getNumOperands() == 3) {
-        // Conditional branch
-        if (info) {
-          // True
-          pc = llvm::dyn_cast<llvm::Instruction>(llvm::dyn_cast<llvm::BasicBlock>(pc->getOperand(2))->begin());
-        } else {
-          // False
-          pc = llvm::dyn_cast<llvm::Instruction>(llvm::dyn_cast<llvm::BasicBlock>(pc->getOperand(1))->begin());
-        }
-      } else {
-        std::cerr << "[Sift-LLVMReader: " << m_id << "] llvm::Instruction::Br does not have neither 1 nor 3 operands..." << std::endl;
-        assert(false);
-      }
-      break;
-    default:
-      pc = pc->getNextNode();
-      break;
-  }
-  if (pc)
+bool Sift::LLVMReader::Read(Instruction &inst)
+{
+  make_inst(inst);
+  if (find_next())
     return true;
   return false;
 }

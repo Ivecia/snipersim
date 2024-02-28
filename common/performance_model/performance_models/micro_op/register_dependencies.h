@@ -15,7 +15,8 @@ private:
     // Array containing the sequence number of the producers for each of the registers.
     // FIXME Depending on the architecture we may have too many elements
     // Not easy to get last element statically with the library
-  uint64_t producers[280];  //XED_REG_LAST;
+  uint64_t producers[1000 + 5];  //XED_REG_LAST;
+  // llvm may have more producers
 public:
   RegisterDependencies();
 

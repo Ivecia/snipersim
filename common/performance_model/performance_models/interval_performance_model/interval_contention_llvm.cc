@@ -48,11 +48,12 @@ uint64_t IntervalContentionLLVM::getEffectiveCriticalPathLength(uint64_t critica
       }
    }
    // Check shared port usage
-   uint64_t port012_use = m_count_byport[DynamicMicroOpLLVM::UOP_INT] + m_count_byport[DynamicMicroOpLLVM::UOP_FLOAT]
-                        + m_count_byport[DynamicMicroOpLLVM::UOP_MEM] + m_count_byport[DynamicMicroOpLLVM::UOP_ALL];
-   if (port012_use > (3*effective_cp_length))
+   uint64_t shared_use = m_count_byport[DynamicMicroOpLLVM::UOP_INT] + m_count_byport[DynamicMicroOpLLVM::UOP_FLOAT]
+                        + m_count_byport[DynamicMicroOpLLVM::UOP_MEM]
+                        + m_count_byport[DynamicMicroOpLLVM::UOP_ALL];
+   if (shared_use > (3*effective_cp_length))
    {
-      effective_cp_length = (port012_use+2) / 3; // +2 to round up to the next cycle
+      effective_cp_length = (shared_use+2) / 3; // +3 to round up to the next cycle
       reason = DynamicMicroOpLLVM::UOP_ALL;
    }
 

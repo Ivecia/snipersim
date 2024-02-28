@@ -9,6 +9,7 @@
 #include <sys/types.h>
 
 #include "sift_reader.h"
+#include <diy.h>
 
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -24,16 +25,14 @@ namespace Sift
   class LLVMReader
   {
     public:
-      LLVMReader(const char *benchmark_name, const char *trace_name, uint32_t id = 0);
+      LLVMReader(const char *trace_name, uint32_t id = 0);
       ~LLVMReader();
-      bool init();
+      bool init(Diy::DiyTool *tool);
       bool Read(Instruction &inst);
     
     private:
       uint32_t m_id;
 
-      llvm::LLVMContext *context;
-      std::unique_ptr<llvm::Module> mod;
       llvm::Instruction *pc;
       uint64_t info;
 
@@ -43,6 +42,13 @@ namespace Sift
       std::ifstream *trace;
 
       std::unordered_map<llvm::Instruction*, const StaticInstruction*> scache;
+
+      Diy::DiyTool *diy;
+      std::unordered_map<uint32_t, bool> newop;
+
+      bool pc_forward();
+      bool find_next();
+      void make_inst(Instruction &inst);
   };
 }
 

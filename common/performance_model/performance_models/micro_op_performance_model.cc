@@ -21,7 +21,7 @@ MicroOp* MicroOpPerformanceModel::m_memaccess_uop = NULL;
 
 MicroOpPerformanceModel::MicroOpPerformanceModel(Core *core, bool issue_memops)
     : PerformanceModel(core)
-    , m_core_model(CoreModel::getCoreModel(Sim()->getCfg()->getStringArray("perf_model/core/core_model", core->getId())))
+    , m_core_model(CoreModel::getCoreModel(Sim()->getCfg()->getStringArray("perf_model/core/core_model", core->getId()), nullptr))
     , m_allocator(m_core_model->createDMOAllocator())
     , m_issue_memops(issue_memops)
     , m_dyninsn_count(0)
@@ -564,4 +564,10 @@ void MicroOpPerformanceModel::handleInstruction(DynamicInstruction *dynins)
 #if DEBUG_CYCLE_COUNT_LOG
    fprintf(m_cycle_log, "[%s] latency=%d\n", itostr(m_elapsed_time).c_str(), itostr(new_latency.getElapsedTime()).c_str());
 #endif
+}
+
+void MicroOpPerformanceModel::setDiyModel(Diy::DiyTool *tool)
+{
+   std::cerr << "test!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
+   m_core_model = CoreModel::getCoreModel(Sim()->getCfg()->getStringArray("perf_model/core/core_model", getCore()->getId()), tool);
 }
