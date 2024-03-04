@@ -10,16 +10,7 @@ Diy::DiyTool::DiyTool(const char *benchmark_name, const char *diy_name, uint32_t
   m_benchmark = strdup(benchmark_name);
   m_diy = strdup(diy_name);
   m_id = id;
-}
 
-Diy::DiyTool::~DiyTool()
-{
-  free(m_benchmark);
-  free(m_diy);
-}
-
-bool Diy::DiyTool::init()
-{
   // Initialize DiyTools
   #if VERBOSE > 0
   std::cerr << "[DEBUG: " << m_id << "] LLVM DiyTool initializing..." << std::endl;
@@ -29,7 +20,7 @@ bool Diy::DiyTool::init()
   
   if ((!diy->is_open()) || (!diy->good())) {
     std::cerr << "[DiyTool: " << m_id << "] Cannot open " << m_diy << "\n";
-    return false;
+    exit(-1);
   }
 
   context = new llvm::LLVMContext;
@@ -38,7 +29,7 @@ bool Diy::DiyTool::init()
 
   if (!mod) {
     std::cerr << "[DiyTool: " << m_id << "] Cannot parse IR file " << m_benchmark << "\n";
-    return false;
+    exit(-1);
   }
   
   #if VERBOSE > 0
@@ -100,7 +91,7 @@ bool Diy::DiyTool::init()
       if (inst_id == *inst_vec.begin()) {
         if (inst2op.count(&inst)) {
           std::cerr << "[DiyTool " << m_id << "] an instruction is mapped to two new ops (ops may be same), with func_id=" << func_id << ", bb_id=" << bb_id << ", inst_id=" << *inst_vec.begin() << ", conflicts are " << inst2op[&inst] << " and " << cur << "." << std::endl;
-          return false;
+          exit(-1);
         }
         inst.dump();
         inst2op[&inst] = cur + 1;
@@ -115,8 +106,12 @@ bool Diy::DiyTool::init()
   #if VERBOSE > 0
   std::cerr << "[DEBUG: " << m_id << "] Analysing Diy file and establishing Connections finished without errors..." << std::endl;
   #endif
+}
 
-  return true;
+Diy::DiyTool::~DiyTool()
+{
+  free(m_benchmark);
+  free(m_diy);
 }
 
 // Reader

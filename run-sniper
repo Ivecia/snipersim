@@ -47,8 +47,7 @@ def usage():
         '  |  --pid=<process-pid>' + \
         '  |  [--sift]' + \
         '  |  [--frontend=]' + \
-        '  [--llvm-bench=<benchmark.ll>]' + \
-        '  [--diy=<diy.txt>]' + \
+        '  [--llvm-bench=<app_name_0>,<app_name_1>,...]' + \
         '  -- <cmdline> }'
   print
   print 'Example: $ ./run-sniper -- /bin/ls'
@@ -109,8 +108,7 @@ verbose = False
 use_pa = True
 use_pinplay = False
 use_llvm = False
-llvm_bench = ''
-diy = ''
+llvm_bench = []
 
 if not sys.argv[1:]:
   usage()
@@ -227,8 +225,7 @@ try:
       "pid=",
       "frontend=",
       "record-trace-option=",
-      "llvm-bench=",
-      "diy="
+      "llvm-bench="
     ] + record_trace_passthrough
   )
 except getopt.GetoptError, e:
@@ -365,11 +362,8 @@ for o, a in opts:
     frontend = a
     use_sift = True
   if o == '--llvm-bench':
+    llvm_bench = a.split(',')
     use_llvm = True
-    llvm_bench = str(a)
-  if o == '--diy':
-    use_llvm = True
-    diy = str(a)
   if o.startswith('--') and o[2:] in record_trace_passthrough:
     trace_extra_args.append(o)
   if o.startswith('--') and o[2:]+'=' in record_trace_passthrough:
@@ -414,8 +408,10 @@ else:
     opt_count+=1
   if use_pid:
     opt_count+=1
+  if use_llvm:
+    opt_count+=1
   if opt_count == 0:
-    print >> sys.stderr, 'Need either a set of traces (--traces= or --trace-manual), a pinball, an application pid or a benchmark command line'
+    print >> sys.stderr, 'Need either a set of traces (--traces= or --trace-manual or --llvm-bench=), a pinball, an application pid or a benchmark command line'
     usage()
   if opt_count > 1:
     print >> sys.stderr, 'Can only use one of --traces=, --trace-manual, --pid=  or --pinballs= when not using a command line argument'
@@ -466,11 +462,7 @@ if not os.path.exists(outputdir):
     sys.exit(-1)
 
 if use_llvm and llvm_bench == '':
-  print >> sys.stderr, 'Enabled LLVM, but not give the path to benchmark.ll'
-  sys.exit(-1)
-
-if use_llvm and diy == '':
-  print >> sys.stderr, 'Enabled LLVM, but not give the path to diy.txt'
+  print >> sys.stderr, 'Enabled LLVM, but not give the path to config.cfg'
   sys.exit(-1)
 
 if save_output:
@@ -497,7 +489,10 @@ if roi_only or use_mpi:
 if roi_script:
   sniperoptions.append('-g --general/roi_script=true')
 
-if sim_end == 'first':
+if use_llvm:
+  sniperoptions.append('-g --traceinput/stop_with_first_app=false')
+  sniperoptions.append('-g --traceinput/restart_apps=false')
+elif sim_end == 'first':
   sniperoptions.append('-g --traceinput/stop_with_first_app=true')
   sniperoptions.append('-g --traceinput/restart_apps=false')
 elif sim_end == 'last':
@@ -515,11 +510,6 @@ if use_viz_aso or use_profile:
   sniperoptions.append('-g --routine_tracer/type=funcstats')
 if use_memory_profile:
   sniperoptions.append('-g --routine_tracer/type=memory_tracker')
-
-if use_llvm:
-  sniperoptions.append('-g --traceinput/stop_with_first_app=false')
-  sniperoptions.append('-g --llvm/benchmark=' + llvm_bench)
-  sniperoptions.append('-g --llvm/diy=' + diy)
 
 if scripts:
   scriptname = os.path.join(outputdir, 'sim.scripts.py')
@@ -544,7 +534,15 @@ if scripts:
   sniperoptions.append('-g --hooks/script0args=')
 
 # If using traces via this front-end, support either multi-program workloads or a single multi-threaded application
-if traces:
+if use_llvm:
+  sniperoptions.append("-g --traceinput/enabled=true")
+  sniperoptions.append('-g --traceinput/emulate_syscalls=false')
+  sniperoptions = ['-g --traceinput/mirror_output=true'] + sniperoptions # Stored traces: mirror output by default, overridable on command line
+  sniperoptions.append('-g --traceinput/num_apps=%u' % len(llvm_bench))
+  for thread_id, bench_file in enumerate(llvm_bench):
+    print '[SNIPER] (%u) Using LLVM Application "%s"' % (thread_id, bench_file)
+    sniperoptions.append('-g --traceinput/llvm-bench_%u=%s' % (thread_id, bench_file))
+elif traces:
   sniperoptions.append('-g --traceinput/enabled=true')
   if resptraces:
     sniperoptions.append('-g --traceinput/emulate_syscalls=true')

@@ -25,6 +25,9 @@ TraceManager::TraceManager()
    , m_app_info(m_num_apps)
    , m_tracefiles(m_num_apps)
    , m_responsefiles(m_num_apps)
+#if SNIPER_LLVM
+   , m_diy(m_num_apps)
+#endif
 {
    setupTraceFiles(0);
 }
@@ -33,6 +36,14 @@ void TraceManager::setupTraceFiles(int index)
 {
    m_trace_prefix = Sim()->getCfg()->getStringArray("traceinput/trace_prefix", index);
 
+#if SNIPER_LLVM
+   for (UInt32 i = 0 ; i < m_num_apps ; i++ )
+   {
+      m_tracefiles[i] = Sim()->getCfg()->getStringArray("traceinput/llvm-bench_" + itostr(i), index);
+      m_diy[i] = new Diy::DiyTool((m_tracefiles[i] + ".ll").c_str(), (m_tracefiles[i] + "/diy.txt").c_str(), i);
+      m_mapping[m_tracefiles[i]] = i;
+   }
+#else
    if (m_emulate_syscalls)
    {
       if (m_trace_prefix == "")
@@ -57,6 +68,7 @@ void TraceManager::setupTraceFiles(int index)
          m_tracefiles[i] = Sim()->getCfg()->getStringArray("traceinput/thread_" + itostr(i), index);
       }
    }
+#endif
 }
 
 void TraceManager::init()
@@ -121,7 +133,7 @@ thread_id_t TraceManager::newThread(app_id_t app_id, bool first, bool init_fifo,
 
    m_num_threads_running++;
    Thread *thread = Sim()->getThreadManager()->createThread(app_id, creator_thread_id);
-   TraceThread *tthread = new TraceThread(thread, time, tracefile, responsefile, app_id, init_fifo /*cleaup*/);
+   TraceThread *tthread = new TraceThread(thread, time, tracefile, responsefile, app_id, -1, init_fifo /*cleaup*/);
    m_threads.push_back(tthread);
 
    if (spawn)
@@ -373,3 +385,39 @@ void TraceManager::Monitor::spawn()
    m_thread = _Thread::create(this);
    m_thread->run();
 }
+
+#if SNIPER_LLVM
+Diy::DiyTool* TraceManager::getDiy(String trace)
+{
+   if (m_mapping.count(trace))
+      return m_diy[m_mapping[trace]];
+   return NULL;
+}
+
+// createLLVMApplication conbines createApplication and newThread
+app_id_t TraceManager::createLLVMApplication(SubsecondTime time, thread_id_t creator_thread_id, String tracefile, int32_t file_id)
+{
+   ScopedLock sl(m_lock);
+
+   app_id_t app_id = m_num_apps;
+   m_num_apps++;
+   m_num_apps_nonfinish++;
+
+   app_info_t app_info;
+   m_app_info.push_back(app_info);
+
+   m_app_info[app_id].num_threads = 1;
+   m_app_info[app_id].thread_count = 1;
+   Sim()->getHooksManager()->callHooks(HookType::HOOK_APPLICATION_START, (UInt64)app_id);
+   Sim()->getStatsManager()->logEvent(StatsManager::EVENT_APP_START, SubsecondTime::MaxTime(), INVALID_CORE_ID, INVALID_THREAD_ID, (UInt64)app_id, 0, "");
+
+   m_num_threads_running++;
+   Thread *thread = Sim()->getThreadManager()->createThread(app_id, creator_thread_id);
+   TraceThread *tthread = new TraceThread(thread, time, tracefile, "", app_id, file_id, false /*cleaup */);
+   m_threads.push_back(tthread);
+
+   tthread->spawn();
+
+   return app_id;
+}
+#endif

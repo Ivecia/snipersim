@@ -27,14 +27,14 @@
 
 int TraceThread::m_isa = 0;
 
-TraceThread::TraceThread(Thread *thread, SubsecondTime time_start, String tracefile, String responsefile, app_id_t app_id, bool cleanup)
+TraceThread::TraceThread(Thread *thread, SubsecondTime time_start, String tracefile, String responsefile, app_id_t app_id, int32_t file_id, bool cleanup)
    : m__thread(NULL)
    , m_thread(thread)
    , m_time_start(time_start)
-   , m_trace(tracefile.c_str(), responsefile.c_str(), thread->getId())
 #if SNIPER_LLVM
-   , m_diy(Sim()->getCfg()->getString("llvm/benchmark").c_str(), Sim()->getCfg()->getString("llvm/diy").c_str(), thread->getId())
-   , m_llvm(tracefile.c_str(), thread->getId())
+   , m_llvm(Sim()->getTraceManager()->getDiy(tracefile), tracefile, file_id, thread->getId())
+#else
+   , m_trace(tracefile.c_str(), responsefile.c_str(), thread->getId())
 #endif
    , m_trace_has_pa(false)
    , m_address_randomization(Sim()->getCfg()->getBool("traceinput/address_randomization"))
@@ -53,7 +53,10 @@ TraceThread::TraceThread(Thread *thread, SubsecondTime time_start, String tracef
    , m_started(false)
    , m_stopped(false)
 {
-
+#if SNIPER_LLVM
+   m_llvm.setHandleForkFunc(TraceThread::__handleForkFunc, this);
+   m_llvm.setHandleJoinFunc(TraceThread::__handleJoinFunc, this);
+#else
    m_trace.setHandleInstructionCountFunc(TraceThread::__handleInstructionCountFunc, this);
    m_trace.setHandleCacheOnlyFunc(TraceThread::__handleCacheOnlyFunc, this);
    if (Sim()->getCfg()->getBool("traceinput/mirror_output"))
@@ -66,6 +69,7 @@ TraceThread::TraceThread(Thread *thread, SubsecondTime time_start, String tracef
    m_trace.setHandleForkFunc(TraceThread::__handleForkFunc, this);
    if (Sim()->getRoutineTracer())
       m_trace.setHandleRoutineFunc(TraceThread::__handleRoutineChangeFunc, TraceThread::__handleRoutineAnnounceFunc, this);
+#endif
 
    if (m_address_randomization)
    {
@@ -102,6 +106,7 @@ TraceThread::~TraceThread()
 
 UInt64 TraceThread::va2pa(UInt64 va, bool *noMapping)
 {
+#ifndef SNIPER_LLVM
    if (m_trace_has_pa)
    {
       UInt64 pa = m_trace.va2pa(va);
@@ -118,6 +123,7 @@ UInt64 TraceThread::va2pa(UInt64 va, bool *noMapping)
          // Fall through to construct an address with our thread id in the upper bits (assume address is private)
       }
    }
+#endif
 
    UInt64 haddr;
 
@@ -751,6 +757,14 @@ void TraceThread::unblock()
    m_blocked = false;
 }
 
+bool TraceThread::read_inst(Sift::Instruction &inst) {
+#if SNIPER_LLVM
+   return m_llvm.Read(inst);
+#else
+   return m_trace.Read(inst);
+#endif
+};
+
 void TraceThread::run()
 {
    // Set thread name for Sniper-in-Sniper simulations
@@ -761,14 +775,12 @@ void TraceThread::run()
 
    // Open the trace (be sure to do this before potentially blocking on reschedule() as this causes deadlock)
 #if SNIPER_LLVM
-   m_diy.init();
-   m_llvm.init(&m_diy);
-   Sim()->getDecoder()->setDiy(&m_diy);
+   m_llvm.init();
+   Sim()->getDecoder()->setDiy(m_llvm.getDiy());
+#else
    if (Sim()->getDecoder()->get_arch() != dl::DL_ARCH_LLVM) {
-#endif
       m_trace.initStream();
       m_trace_has_pa = m_trace.getTraceHasPhysicalAddresses();
-#if SNIPER_LLVM
    }
 #endif
 
@@ -782,34 +794,14 @@ void TraceThread::run()
    Core *core = m_thread->getCore();
    PerformanceModel *prfmdl = core->getPerformanceModel();
 #if SNIPER_LLVM
-   prfmdl->setDiyModel(&m_diy);
+   prfmdl->setDiyModel(m_llvm.getDiy());
 #endif
 
    Sift::Instruction inst, next_inst;
 
-   bool have_first = [&] {
-#if SNIPER_LLVM
-   if (Sim()->getDecoder()->get_arch() != dl::DL_ARCH_LLVM) {
-      return m_trace.Read(inst);
-   } else {
-      return m_llvm.Read(inst);
-   }
-#else
-   return m_trace.Read(inst);
-#endif
-   }();
+   bool have_first = read_inst(inst);
 
-   while(have_first && [&] {
-#if SNIPER_LLVM
-   if (Sim()->getDecoder()->get_arch() != dl::DL_ARCH_LLVM) {
-      return m_trace.Read(next_inst);
-   } else {
-      return m_llvm.Read(next_inst);
-   }
-#else
-   return m_trace.Read(next_inst);
-#endif
-   }()) {
+   while(have_first && read_inst(inst)) {
       if (!m_started)
       {
          // Received first instructions, let TraceManager know our SIFT connection is up and running
@@ -902,16 +894,26 @@ void TraceThread::spawn()
 
 UInt64 TraceThread::getProgressExpect()
 {
+#if SNIPER_LLVM
+   return m_llvm.getLength();
+#else
    return m_trace.getLength();
+#endif
 }
 
 UInt64 TraceThread::getProgressValue()
 {
+#if SNIPER_LLVM
+   return m_llvm.getPosition();
+#else
    return m_trace.getPosition();
+#endif
 }
 
 void TraceThread::handleAccessMemory(Core::lock_signal_t lock_signal, Core::mem_op_t mem_op_type, IntPtr d_addr, char* data_buffer, UInt32 data_size)
 {
+   // LLVM does not perform request-response memory access, so delete it.
+#ifndef SNIPER_LLVM
    Sift::MemoryLockType sift_lock_signal;
    Sift::MemoryOpType sift_mem_op;
 
@@ -946,4 +948,5 @@ void TraceThread::handleAccessMemory(Core::lock_signal_t lock_signal, Core::mem_
    }
 
    m_trace.AccessMemory(sift_lock_signal, sift_mem_op, d_addr, (uint8_t*)data_buffer, data_size);
+#endif
 }

@@ -7,6 +7,9 @@
 #include "_thread.h"
 
 #include <vector>
+#include <unordered_map>
+
+#include <diy.h>
 
 class TraceThread;
 
@@ -51,6 +54,10 @@ class TraceManager
       std::vector<app_info_t> m_app_info;
       std::vector<String> m_tracefiles;
       std::vector<String> m_responsefiles;
+#if SNIPER_LLVM
+      std::vector<Diy::DiyTool *> m_diy;
+      std::unordered_map<String, UInt32> m_mapping;
+#endif
       String m_trace_prefix;
       Lock m_lock;
 
@@ -79,6 +86,10 @@ class TraceManager
 
       UInt64 getProgressExpect();
       UInt64 getProgressValue();
+#if SNIPER_LLVM
+      Diy::DiyTool* getDiy(String trace);
+      app_id_t createLLVMApplication(SubsecondTime time, thread_id_t creator_thread_id, String tracefile, int32_t file_id);
+#endif
 };
 
 #endif // __TRACE_MANAGER_H

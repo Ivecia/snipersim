@@ -54,10 +54,10 @@ class TraceThread : public Runnable
       _Thread *m__thread;
       Thread *m_thread;
       SubsecondTime m_time_start;
-      Sift::Reader m_trace;
 #if SNIPER_LLVM
-      Diy::DiyTool m_diy;
       Sift::LLVMReader m_llvm;
+#else
+      Sift::Reader m_trace;
 #endif
       bool m_trace_has_pa;
       bool m_address_randomization;
@@ -80,6 +80,7 @@ class TraceThread : public Runnable
       bool m_cleanup;
       bool m_started;
 
+      bool read_inst(Sift::Instruction &inst);
       void run();
       static Sift::Mode __handleInstructionCountFunc(void* arg, uint32_t icount)
       { return ((TraceThread*)arg)->handleInstructionCountFunc(icount); }
@@ -134,7 +135,7 @@ class TraceThread : public Runnable
    public:
       bool m_stopped;
 
-      TraceThread(Thread *thread, SubsecondTime time_start, String tracefile, String responsefile, app_id_t app_id, bool cleanup);
+      TraceThread(Thread *thread, SubsecondTime time_start, String tracefile, String responsefile, app_id_t app_id, int32_t file_id, bool cleanup);
       ~TraceThread();
 
       void spawn();
@@ -143,6 +144,9 @@ class TraceThread : public Runnable
       UInt64 getProgressValue();
       Thread* getThread() const { return m_thread; }
       void handleAccessMemory(Core::lock_signal_t lock_signal, Core::mem_op_t mem_op_type, IntPtr d_addr, char* data_buffer, UInt32 data_size);
+#if SNIPER_LLVM
+      void setLLVMFile(String bench, String diy);
+#endif
 };
 
 #endif // __TRACE_THREAD_H

@@ -568,6 +568,5 @@ void MicroOpPerformanceModel::handleInstruction(DynamicInstruction *dynins)
 
 void MicroOpPerformanceModel::setDiyModel(Diy::DiyTool *tool)
 {
-   std::cerr << "test!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
    m_core_model = CoreModel::getCoreModel(Sim()->getCfg()->getStringArray("perf_model/core/core_model", getCore()->getId()), tool);
 }

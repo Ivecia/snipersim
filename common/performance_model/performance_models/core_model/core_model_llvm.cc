@@ -11,11 +11,7 @@
 
 CoreModelLLVM::CoreModelLLVM(Diy::DiyTool *tool)
 {
-   printf("Enabled LLVM Core Model...\n");
    diy = tool;
-   if (tool) {
-      printf("Enabled [[[DIY]]] LLVM Core Model...\n");
-   }
    m_lll_cutoff = Sim()->getCfg()->getInt("perf_model/core/interval_timer/lll_cutoff");
 }
 

@@ -1,14 +1,32 @@
 #include "llvm_reader.h"
 
 #include <iostream>
+#include <fstream>
+#include <cassert>
+#include <cstring>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include "llvm/Support/raw_ostream.h"
 
 #define VERBOSE 100
 
-Sift::LLVMReader::LLVMReader(const char *trace_name, uint32_t id)
+Sift::LLVMReader::LLVMReader(Diy::DiyTool *tool, String trace_name, int32_t file_id, uint32_t id)
+  : handleForkFunc(NULL)
+  , handleForkArg(NULL)
+  , handleJoinFunc(NULL)
+  , handleJoinArg(NULL)
 {
-  m_trace = strdup(trace_name);
+  m_trace_name = trace_name;
+  char trace_file_name[50];
+  std::cerr << file_id << std::endl;
+  if (file_id == -1)
+    sprintf(trace_file_name, "%s/trace_main.txt", trace_name.c_str());
+  else
+    sprintf(trace_file_name, "%s/trace_%d.txt", trace_name.c_str(), file_id);
+  m_trace = strdup(trace_file_name);
   m_id = id;
+  diy = tool;
 }
 
 Sift::LLVMReader::~LLVMReader()
@@ -17,10 +35,8 @@ Sift::LLVMReader::~LLVMReader()
   free(m_trace);
 }
 
-bool Sift::LLVMReader::init(Diy::DiyTool *tool)
+bool Sift::LLVMReader::init()
 {
-  diy = tool;
-
   #if VERBOSE > 0
   std::cerr << "[DEBUG: " << m_id << "] LLVM Reader initializing..." << std::endl;
   #endif
@@ -31,6 +47,10 @@ bool Sift::LLVMReader::init(Diy::DiyTool *tool)
     std::cerr << "[Sift-LLVMReader: " << m_id << "] Cannot open " << m_trace << "\n";
     return false;
   }
+
+  struct stat filestatus;
+  stat(m_trace, &filestatus);
+  filesize = filestatus.st_size;
 
   pc = diy->get_init_pc();
 
@@ -156,4 +176,21 @@ bool Sift::LLVMReader::Read(Instruction &inst)
   if (find_next())
     return true;
   return false;
+}
+
+Diy::DiyTool* Sift::LLVMReader::getDiy()
+{
+  return diy;
+}
+
+uint64_t Sift::LLVMReader::getPosition()
+{
+  if (trace)
+    return trace->tellg();
+  return 0;
+}
+
+uint64_t Sift::LLVMReader::getLength()
+{
+  return filesize;
 }

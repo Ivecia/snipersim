@@ -8,6 +8,7 @@
 #include <inttypes.h>
 #include <sys/types.h>
 
+#include "fixed_types.h"
 #include "sift_reader.h"
 #include <diy.h>
 
@@ -24,14 +25,32 @@ namespace Sift
 {
   class LLVMReader
   {
+    typedef int32_t (*HandleJoinFunc)(void* arg, int32_t thread);
+    typedef int32_t (*HandleForkFunc)(void* arg);
     public:
-      LLVMReader(const char *trace_name, uint32_t id = 0);
+      LLVMReader(Diy::DiyTool *tool, String trace_name, int32_t file_id, uint32_t id = 0);
       ~LLVMReader();
-      bool init(Diy::DiyTool *tool);
+
+      bool init();
       bool Read(Instruction &inst);
+      Diy::DiyTool* getDiy();
+      uint64_t getPosition();
+      uint64_t getLength();
+
+      // fork and join
+      void setHandleForkFunc(HandleForkFunc func, void* arg = NULL) { assert(func); handleForkFunc = func; handleForkArg = arg;}
+      void setHandleJoinFunc(HandleJoinFunc func, void* arg = NULL) { assert(func); handleJoinFunc = func; handleJoinArg = arg; }
     
     private:
+      // fork and join
+      HandleForkFunc handleForkFunc;
+      void *handleForkArg;
+      HandleJoinFunc handleJoinFunc;
+      void *handleJoinArg;
+
       uint32_t m_id;
+      String m_trace_name;
+      uint64_t filesize;
 
       llvm::Instruction *pc;
       uint64_t info;

@@ -81,27 +81,31 @@ $(error One or more tools requested for build. Only one supported USE_PIN=$(USE_
 endif
 
 message:
-	@echo -n Building for x86 \($(SNIPER_TARGET_ARCH)\)
-ifneq (,$(USE_PIN))
-	@echo -n " with Pin"
-else ifneq (,$(USE_PINPLAY))
-	@echo -n " with Pinplay"
-else
-	@echo -n " with SDE"
-endif
-ifeq ($(BUILD_DYNAMORIO),1)
-	@echo -n " and DynamoRIO"
-endif
-ifeq ($(BUILD_RISCV),1)
-	@echo -n " and RISCV"
-endif
-ifeq ($(BUILD_ARM),1)
-	@echo -n " and arm64"
-endif
 ifeq ($(BUILD_LLVM),1)
-	@echo -n " and LLVM"
+	@echo "Building Sniper Simulator for LLVM"
+else
+	@echo -n Building for x86 \($(SNIPER_TARGET_ARCH)\)
+	ifneq (,$(USE_PIN))
+		@echo -n " with Pin"
+	else ifneq (,$(USE_PINPLAY))
+		@echo -n " with Pinplay"
+	else
+		@echo -n " with SDE"
+	endif
+	ifeq ($(BUILD_DYNAMORIO),1)
+		@echo -n " and DynamoRIO"
+	endif
+	ifeq ($(BUILD_RISCV),1)
+		@echo -n " and RISCV"
+	endif
+	ifeq ($(BUILD_ARM),1)
+		@echo -n " and arm64"
+	endif
+	ifeq ($(BUILD_LLVM),1)
+		@echo -n " and LLVM"
+	endif
+		@echo ""
 endif
-	@echo ""
 
 $(STANDALONE): $(LIB_CARBON) $(LIB_SIFT) $(LIB_DECODER)
 	@$(MAKE) $(MAKE_QUIET) -C $(SIM_ROOT)/standalone

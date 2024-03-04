@@ -1,0 +1,6 @@
+/root/snipersim/trace/build/CMakeFiles/intrinsics_gen.dir
+/root/snipersim/trace/build/CMakeFiles/omp_gen.dir
+/root/snipersim/trace/build/CMakeFiles/acc_gen.dir
+/root/snipersim/trace/build/CMakeFiles/TraceInfo.dir
+/root/snipersim/trace/build/CMakeFiles/edit_cache.dir
+/root/snipersim/trace/build/CMakeFiles/rebuild_cache.dir
