@@ -41,7 +41,6 @@ void TraceManager::setupTraceFiles(int index)
    {
       m_tracefiles[i] = Sim()->getCfg()->getStringArray("traceinput/llvm-bench_" + itostr(i), index);
       m_diy[i] = new Diy::DiyTool((m_tracefiles[i] + ".ll").c_str(), (m_tracefiles[i] + "/diy.txt").c_str(), i);
-      m_mapping[m_tracefiles[i]] = i;
    }
 #else
    if (m_emulate_syscalls)
@@ -133,6 +132,9 @@ thread_id_t TraceManager::newThread(app_id_t app_id, bool first, bool init_fifo,
 
    m_num_threads_running++;
    Thread *thread = Sim()->getThreadManager()->createThread(app_id, creator_thread_id);
+#if SNIPER_LLVM
+   m_mapping[thread->getId()] = app_id;
+#endif
    TraceThread *tthread = new TraceThread(thread, time, tracefile, responsefile, app_id, -1, init_fifo /*cleaup*/);
    m_threads.push_back(tthread);
 
@@ -387,10 +389,10 @@ void TraceManager::Monitor::spawn()
 }
 
 #if SNIPER_LLVM
-Diy::DiyTool* TraceManager::getDiy(String trace)
+Diy::DiyTool* TraceManager::getDiy(UInt32 tid)
 {
-   if (m_mapping.count(trace))
-      return m_diy[m_mapping[trace]];
+   if (m_mapping.count(tid))
+      return m_diy[m_mapping[tid]];
    return NULL;
 }
 
@@ -413,6 +415,7 @@ app_id_t TraceManager::createLLVMApplication(SubsecondTime time, thread_id_t cre
 
    m_num_threads_running++;
    Thread *thread = Sim()->getThreadManager()->createThread(app_id, creator_thread_id);
+   m_mapping[thread->getId()] = m_mapping[creator_thread_id];
    TraceThread *tthread = new TraceThread(thread, time, tracefile, "", app_id, file_id, false /*cleaup */);
    m_threads.push_back(tthread);
 

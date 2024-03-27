@@ -4,7 +4,7 @@
 
 ## Preparing Benchmark & Trace
 
-Step 1, compile benchmark to LLVM IR.
+Step 1, compile benchmarks to LLVM IR using clang.
 
 ```
 cd snipersim/trace/test
@@ -12,11 +12,9 @@ clang -S -emit-llvm -fno-slp-vectorize -fno-vectorize -fno-unroll-loops -ffp-con
 clang -S -emit-llvm -fno-slp-vectorize -fno-vectorize -fno-unroll-loops -ffp-contract=off parallel-add.c -pthread
 ```
 
-Noted that **any function calls** will be ignored during the simulation of the code.
+Step 2, compile the injection code and trace pass, inject code to benchmark, and compile and link on any platform (like x86), run it. It will output whether a branch will be taken and the addresses of each load and store as traces for each application.
 
-Step 2, compile the injection code and trace pass, inject code to benchmark, and compile to any platform (like x86), run it. It will output whether a branch will be taken and the addresses of each load and store.
-
-To support multithreading, we use `pthread` model instead of OpenMP or MPI, because it is easy to generate trace and analyse by sniper simulator at LLVM IR level.
+To support multithreading, we use `pthread` model instead of OpenMP or MPI, because it is easy to generate trace and analyse by sniper simulator at LLVM IR level. The sniper simulator will treat `pthread_create` and `pthread_join` as fork and join.
 
 ```
 # Compile injection code
@@ -51,18 +49,20 @@ rm magic.bc
 rm parallel-add.bc
 ```
 
-Noted that the main thread will generate trace in `trace_main.txt`, and other threads will generate trace in `trace_i.txt` where i is the id of that thread. **Different applications will generate traces with same filenames, so it is important to copy any file to other place between trace generation.**
+Noted that the main thread will generate trace in `trace_main.txt`, and other threads will generate trace in `trace_i.txt` where i is the id of that thread.
+
+**Important: Different applications will generate traces with same filenames, so it is important to copy any files to other place between trace generations.**
 
 ## Running benchmark in sniper
 
-Step 1, make a dictionary under `snipersim/test/`, like `snipersim/test/magic`, prepare all things which is needed by sniper.
+Step 1, make a directory under `snipersim/test/`, like `snipersim/test/magic`, prepare all things which is needed by sniper.
 
 ```
 mkdir snipersim/test/magic
 cd snipersim/test/magic
 ```
 
-Step 2, copy all files under `prepare` folder, and all related materials.
+Step 2, copy all files under `prepare` folder, copy all benchmarks under `test` folder, and prepare `diy.txt`.
 
 ```
 cp -r snipersim/trace/prepare/* snipersim/test/magic
@@ -90,9 +90,9 @@ CLEAN_EXTRA=viz
 And here are some options:
 
 - `-c llvm`: enable llvm configuration, which is defined in `snipersim/config/llvm.cfg`
-- `--llvm-bench=matmul,parallel-add`: using `matmul` and `parallel-add` as the applications for this test.
+- `--llvm-bench=matmul,parallel-add`: using `matmul` and `parallel-add` as the applications for this test. Noted that there are no spaces between applications (i.e. separate applications by commas).
 
-Step 4, check again. At this time, your dictionary (`snipersim/test/magic` for example) should look like:
+Step 4, check again. At this time, your directory (`snipersim/test/magic` for example) should look like:
 
 ```
 root@machine:~/snipersim/test/magic# tree
@@ -145,11 +145,22 @@ DIY format contains several lines:
   - Line 3: the number of instructions for new merged instruction
   - Line 4: enum id for each instruction, separated by spaces
 
-See `snipersim/test/mat-magic/diy.txt` for example.
+See `snipersim/test/mat-magic/magic/diy.txt` for example.
 
 ### Function
 
 DIY Toolbox provide several functions used in LLVM Reader, LLVM Decoder and Performance Model for LLVM, which will provide necessary information while processing LLVM IR or the latency of LLVM Opcode.
+
+|     Function Name     |         Used in        |                                    Used to                                    |
+|:---------------------:|:----------------------:|:-----------------------------------------------------------------------------:|
+|      get_init_pc      |       LLVM Reader      |                          Get initial PC for a thread                          |
+|      set_init_pc      |       LLVM Reader      |                         Set PC for an upcoming thread                         |
+|       request_op      |       LLVM Reader      |      Get opcode of an instruction (with checking for merged instruction)      |
+| get_first_instruction |      LLVM Decoder      | Get the first instruction that originally corresponds to a merged instruction |
+|      num_operands     |      LLVM Decoder      |                     Deal with merged instruction specially                    |
+|       op_is_reg       |      LLVM Decoder      |                     Deal with merged instruction specially                    |
+|       get_op_reg      |      LLVM Decoder      |                     Deal with merged instruction specially                    |
+|      get_latency      | LLVM Performance Model |                     Deal with merged instruction specially                    |
 
 ## LLVM Toolbox
 
@@ -159,15 +170,19 @@ LLVM Toolbox contains LLVM Reader, LLVM Decoder and Performance Model for LLVM.
 
 ### LLVM Reader
 
-LLVM Reader is implemented under `snipersim/sift`, which is a part of Sift Reader, responsible for maintaining `pc`, and analyse whether the instruction is part of a merged instruction. It will finally translate LLVM IR to Sift formatted instruction and return to TraceThread as Sift Reader does.
+LLVM Reader is implemented under `snipersim/sift`, which is a part of Sift Reader, responsible for maintaining `pc`, and analyse whether the instruction is part of a merged instruction. It will finally translate LLVM IR to (almost) Sift formatted instruction and return to `TraceThread` as Sift Reader does.
 
 If the reader meet a merged instruction, it will call functions in DIY Toolbox to get any information. The merged instruction will be considered to be appear at the position of the first original instruction.
 
-Noted that the LLVM Reader will disable the original Sift Reader.
+If the reader meet a `pthread_create` function call, it will call the handler to fork another thread, set its `pc` to the function which `pthread_create` defined, and finally continue to run the next instruction.
+
+If the reader meet a `pthread_join` function call, it will call the handler to join another thread which was previously defined.
+
+Noted that the LLVM Reader will **disable** the original Sift Reader.
 
 ### LLVM Decoder
 
-LLVM Decoder is implemented under `snipersim/decoder_lib`, responsible for decode the Sift formatted instruction (which will finally convert to llvm instruction or merged instruction). It will manage the return values related to instructions, like the number of operands, etc.
+LLVM Decoder is implemented under `snipersim/decoder_lib`, responsible for decoding the Sift formatted instruction (which will finally convert to llvm instruction or merged instruction). It will manage the return values related to instructions, like the number of operands, etc.
 
 The address of `llvm::Instruction` will be passed to LLVM Decoder, so that the decoder can use LLVM library to handle different requirements from sniper simulator.
 
@@ -185,11 +200,8 @@ The latency for each instruction can be changed under `snipersim/common/performa
 
 # TODO
 
-- Fully multicore support
-  - Multicore tracing
-  - Multicore Simulating (using fork and join provided in sift_reader.cc)
 - Function calls
-  - Internal function calls
+  - Function Pointer
   - External function calls
 - Performance Model
   - ROB Performance Model
@@ -203,3 +215,7 @@ Using option `-ffp-contract=off` while generating LLVM IR.
 ## Is that possible to enable a higher level of optimization?
 
 Yes, but some optimizations may lead to unintended errors.
+
+## Is that possible to run a parallel program?
+
+Yes, but please use `pthread` as previously said, not use OpenMP and MPI, etc.

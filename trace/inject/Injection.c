@@ -87,7 +87,7 @@ void enterFunction()
     }
     if (!trace_file_created) {
         trace_file_created = true;
-        char trace_file_name[20];
+        char trace_file_name[2048];
         // get trace_id in critical section
         pthread_mutex_lock(&trace_id_mutex);
         sprintf(trace_file_name, "trace_%d.txt", trace_id);

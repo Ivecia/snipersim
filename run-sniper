@@ -540,6 +540,7 @@ if use_llvm:
   sniperoptions = ['-g --traceinput/mirror_output=true'] + sniperoptions # Stored traces: mirror output by default, overridable on command line
   sniperoptions.append('-g --traceinput/num_apps=%u' % len(llvm_bench))
   for thread_id, bench_file in enumerate(llvm_bench):
+    bench_file = curdir + "/" + bench_file
     print '[SNIPER] (%u) Using LLVM Application "%s"' % (thread_id, bench_file)
     sniperoptions.append('-g --traceinput/llvm-bench_%u=%s' % (thread_id, bench_file))
 elif traces:

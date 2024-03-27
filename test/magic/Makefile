@@ -3,6 +3,6 @@ TARGET=magic
 include ../shared/Makefile.shared
 
 run_$(TARGET):
-	../../run-sniper -v -c llvm --llvm-bench=matmul
+	../../run-sniper -v --power -c llvm --llvm-bench=parallel-add,matmul
 
 CLEAN_EXTRA=viz

@@ -56,7 +56,7 @@ class TraceManager
       std::vector<String> m_responsefiles;
 #if SNIPER_LLVM
       std::vector<Diy::DiyTool *> m_diy;
-      std::unordered_map<String, UInt32> m_mapping;
+      std::unordered_map<UInt32, UInt32> m_mapping;
 #endif
       String m_trace_prefix;
       Lock m_lock;
@@ -87,7 +87,7 @@ class TraceManager
       UInt64 getProgressExpect();
       UInt64 getProgressValue();
 #if SNIPER_LLVM
-      Diy::DiyTool* getDiy(String trace);
+      Diy::DiyTool* getDiy(UInt32 tid);
       app_id_t createLLVMApplication(SubsecondTime time, thread_id_t creator_thread_id, String tracefile, int32_t file_id);
 #endif
 };

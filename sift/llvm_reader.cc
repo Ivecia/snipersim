@@ -9,17 +9,16 @@
 #include <unistd.h>
 #include "llvm/Support/raw_ostream.h"
 
-#define VERBOSE 100
+#define VERBOSE 0
 
 Sift::LLVMReader::LLVMReader(Diy::DiyTool *tool, String trace_name, int32_t file_id, uint32_t id)
-  : handleForkFunc(NULL)
-  , handleForkArg(NULL)
-  , handleJoinFunc(NULL)
-  , handleJoinArg(NULL)
+  : handleLLVMForkFunc(NULL)
+  , handleLLVMForkArg(NULL)
+  , handleLLVMJoinFunc(NULL)
+  , handleLLVMJoinArg(NULL)
 {
   m_trace_name = trace_name;
-  char trace_file_name[50];
-  std::cerr << file_id << std::endl;
+  char trace_file_name[2048];
   if (file_id == -1)
     sprintf(trace_file_name, "%s/trace_main.txt", trace_name.c_str());
   else
@@ -27,6 +26,7 @@ Sift::LLVMReader::LLVMReader(Diy::DiyTool *tool, String trace_name, int32_t file
   m_trace = strdup(trace_file_name);
   m_id = id;
   diy = tool;
+  pc = diy->get_init_pc(file_id);
 }
 
 Sift::LLVMReader::~LLVMReader()
@@ -51,8 +51,6 @@ bool Sift::LLVMReader::init()
   struct stat filestatus;
   stat(m_trace, &filestatus);
   filesize = filestatus.st_size;
-
-  pc = diy->get_init_pc();
 
   if (!pc) {
     std::cerr << "[Sift-LLVMReader: " << m_id << "] Cannot find the main function in " << m_benchmark << "\n";
@@ -173,9 +171,38 @@ void Sift::LLVMReader::make_inst(Instruction &inst)
 bool Sift::LLVMReader::Read(Instruction &inst)
 {
   make_inst(inst);
-  if (find_next())
-    return true;
-  return false;
+  if (pc->getOpcode() == llvm::Instruction::Call) {
+    bool ret;
+    // multithreading
+    auto now = llvm::dyn_cast<llvm::CallInst>(pc);
+    if (now->getCalledFunction()->getName() == "pthread_create") {
+      auto callee = llvm::dyn_cast<llvm::Function>(now->getOperand(2));
+      diy->set_init_pc(trace_count, llvm::dyn_cast<llvm::Instruction>(callee->getEntryBlock().begin()));
+      trace_queue.push(handleLLVMForkFunc(handleLLVMForkArg, trace_count));
+      trace_count++;
+      ret = find_next();
+    } else if (now->getCalledFunction()->getName() == "pthread_join") {
+      assert(trace_queue.size());
+      handleLLVMJoinFunc(handleLLVMJoinArg, trace_queue.front());
+      trace_queue.pop();
+      ret = find_next();
+    } else if (now->getCalledFunction()->isDeclaration() == false) {
+      ret = find_next();
+      func.push(pc);
+      pc = llvm::dyn_cast<llvm::Instruction>(now->getCalledFunction()->getEntryBlock().begin());
+    } else {
+      ret = find_next();
+    }
+    return ret;
+  } else {
+    bool ret = find_next();
+    if (ret == false && func.size()) {
+      ret = true;
+      pc = func.top();
+      func.pop();
+    }
+    return ret;
+  }
 }
 
 Diy::DiyTool* Sift::LLVMReader::getDiy()

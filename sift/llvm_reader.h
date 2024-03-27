@@ -7,6 +7,8 @@
 #include <cstring>
 #include <inttypes.h>
 #include <sys/types.h>
+#include <stack>
+#include <queue>
 
 #include "fixed_types.h"
 #include "sift_reader.h"
@@ -25,8 +27,8 @@ namespace Sift
 {
   class LLVMReader
   {
-    typedef int32_t (*HandleJoinFunc)(void* arg, int32_t thread);
-    typedef int32_t (*HandleForkFunc)(void* arg);
+    typedef int32_t (*HandleLLVMJoinFunc)(void* arg, int32_t thread);
+    typedef int32_t (*HandleLLVMForkFunc)(void* arg, int32_t file_id);
     public:
       LLVMReader(Diy::DiyTool *tool, String trace_name, int32_t file_id, uint32_t id = 0);
       ~LLVMReader();
@@ -38,15 +40,15 @@ namespace Sift
       uint64_t getLength();
 
       // fork and join
-      void setHandleForkFunc(HandleForkFunc func, void* arg = NULL) { assert(func); handleForkFunc = func; handleForkArg = arg;}
-      void setHandleJoinFunc(HandleJoinFunc func, void* arg = NULL) { assert(func); handleJoinFunc = func; handleJoinArg = arg; }
+      void setHandleLLVMForkFunc(HandleLLVMForkFunc func, void* arg = NULL) { assert(func); handleLLVMForkFunc = func; handleLLVMForkArg = arg;}
+      void setHandleLLVMJoinFunc(HandleLLVMJoinFunc func, void* arg = NULL) { assert(func); handleLLVMJoinFunc = func; handleLLVMJoinArg = arg; }
     
     private:
       // fork and join
-      HandleForkFunc handleForkFunc;
-      void *handleForkArg;
-      HandleJoinFunc handleJoinFunc;
-      void *handleJoinArg;
+      HandleLLVMForkFunc handleLLVMForkFunc;
+      void *handleLLVMForkArg;
+      HandleLLVMJoinFunc handleLLVMJoinFunc;
+      void *handleLLVMJoinArg;
 
       uint32_t m_id;
       String m_trace_name;
@@ -64,6 +66,10 @@ namespace Sift
 
       Diy::DiyTool *diy;
       std::unordered_map<uint32_t, bool> newop;
+
+      uint32_t trace_count = 0;
+      std::stack<llvm::Instruction*> func;
+      std::queue<int32_t> trace_queue;
 
       bool pc_forward();
       bool find_next();

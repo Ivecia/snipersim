@@ -32,7 +32,8 @@ namespace Diy
       bool init();
 
       // Reader
-      llvm::Instruction* get_init_pc();
+      llvm::Instruction* get_init_pc(int32_t file_id);
+      void set_init_pc(int32_t file_id, llvm::Instruction *pc);
       uint32_t request_op(llvm::Instruction *inst);
       // Decoder
       llvm::Instruction* get_first_instruction(const uint32_t op);
@@ -56,6 +57,8 @@ namespace Diy
       std::unordered_map<llvm::Instruction *, uint32_t> inst2op;
       std::unordered_map< uint32_t, std::vector<llvm::Instruction *> > op2inst;
       std::unordered_map< uint32_t, llvm::Instruction* > op2first;
+
+      std::vector<llvm::Instruction *> init_pc;
   };
 }
 

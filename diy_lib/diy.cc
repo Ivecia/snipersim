@@ -3,7 +3,7 @@
 #include <iostream>
 #include "llvm/Support/raw_ostream.h"
 
-#define VERBOSE 100
+#define VERBOSE 0
 
 Diy::DiyTool::DiyTool(const char *benchmark_name, const char *diy_name, uint32_t id)
 {
@@ -116,15 +116,26 @@ Diy::DiyTool::~DiyTool()
 
 // Reader
 
-llvm::Instruction* Diy::DiyTool::get_init_pc()
+llvm::Instruction* Diy::DiyTool::get_init_pc(int32_t file_id)
 {
-  llvm::Instruction *pc = nullptr;
-  for (auto &func : *mod) {
-    if (func.isDeclaration() || func.getName() != "main")
-      continue;
-    pc = llvm::dyn_cast<llvm::Instruction>(func.getEntryBlock().begin());
+  if (file_id == -1) {
+    // trace_main
+    llvm::Instruction *pc = nullptr;
+    for (auto &func : *mod) {
+      if (func.isDeclaration() || func.getName() != "main")
+        continue;
+      pc = llvm::dyn_cast<llvm::Instruction>(func.getEntryBlock().begin());
+    }
+    return pc;
+  } else {
+    return init_pc[file_id];
   }
-  return pc;
+}
+
+void Diy::DiyTool::set_init_pc(int32_t file_id, llvm::Instruction *pc)
+{
+  assert(file_id == (int32_t)init_pc.size());
+  init_pc.push_back(pc);
 }
 
 uint32_t Diy::DiyTool::request_op(llvm::Instruction *inst)

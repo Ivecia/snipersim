@@ -82,6 +82,12 @@ class TraceThread : public Runnable
 
       bool read_inst(Sift::Instruction &inst);
       void run();
+#if SNIPER_LLVM
+      static int32_t __handleLLVMForkFunc(void *arg, int32_t file_id)
+      { return ((TraceThread*)arg)->handleLLVMForkFunc(file_id); }
+      static int32_t __handleLLVMJoinFunc(void *arg, int32_t join_thread_id)
+      { return ((TraceThread*)arg)->handleLLVMJoinFunc(join_thread_id); }
+#endif
       static Sift::Mode __handleInstructionCountFunc(void* arg, uint32_t icount)
       { return ((TraceThread*)arg)->handleInstructionCountFunc(icount); }
       static void __handleCacheOnlyFunc(void* arg, uint8_t icount, Sift::CacheOnlyType type, uint64_t eip, uint64_t address)
@@ -105,6 +111,10 @@ class TraceThread : public Runnable
       static int32_t __handleForkFunc(void* arg)
       { return ((TraceThread*)arg)->handleForkFunc();}
 
+#if SNIPER_LLVM
+      int32_t handleLLVMForkFunc(int32_t file_id);
+      int32_t handleLLVMJoinFunc(int32_t join_thread_id);
+#endif
       Sift::Mode handleInstructionCountFunc(uint32_t icount);
       void handleCacheOnlyFunc(uint8_t icount, Sift::CacheOnlyType type, uint64_t eip, uint64_t address);
       void handleOutputFunc(uint8_t fd, const uint8_t *data, uint32_t size);

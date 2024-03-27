@@ -32,7 +32,7 @@ TraceThread::TraceThread(Thread *thread, SubsecondTime time_start, String tracef
    , m_thread(thread)
    , m_time_start(time_start)
 #if SNIPER_LLVM
-   , m_llvm(Sim()->getTraceManager()->getDiy(tracefile), tracefile, file_id, thread->getId())
+   , m_llvm(Sim()->getTraceManager()->getDiy(thread->getId()), tracefile, file_id, thread->getId())
 #else
    , m_trace(tracefile.c_str(), responsefile.c_str(), thread->getId())
 #endif
@@ -54,8 +54,8 @@ TraceThread::TraceThread(Thread *thread, SubsecondTime time_start, String tracef
    , m_stopped(false)
 {
 #if SNIPER_LLVM
-   m_llvm.setHandleForkFunc(TraceThread::__handleForkFunc, this);
-   m_llvm.setHandleJoinFunc(TraceThread::__handleJoinFunc, this);
+   m_llvm.setHandleLLVMForkFunc(TraceThread::__handleLLVMForkFunc, this);
+   m_llvm.setHandleLLVMJoinFunc(TraceThread::__handleLLVMJoinFunc, this);
 #else
    m_trace.setHandleInstructionCountFunc(TraceThread::__handleInstructionCountFunc, this);
    m_trace.setHandleCacheOnlyFunc(TraceThread::__handleCacheOnlyFunc, this);
@@ -950,3 +950,16 @@ void TraceThread::handleAccessMemory(Core::lock_signal_t lock_signal, Core::mem_
    m_trace.AccessMemory(sift_lock_signal, sift_mem_op, d_addr, (uint8_t*)data_buffer, data_size);
 #endif
 }
+
+#if SNIPER_LLVM
+int32_t TraceThread::handleLLVMForkFunc(int32_t file_id)
+{
+   return Sim()->getTraceManager()->createLLVMApplication(getCurrentTime(), m_thread->getId(), m_tracefile, file_id);
+}
+
+int32_t TraceThread::handleLLVMJoinFunc(int32_t join_thread_id)
+{
+   Sim()->getThreadManager()->joinThread(m_thread->getId(), join_thread_id);
+   return 0;
+}
+#endif
